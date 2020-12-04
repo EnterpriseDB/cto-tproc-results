@@ -1,0 +1,137 @@
+userid,dbid,queryid,query,plans,total_plan_time,min_plan_time,max_plan_time,mean_plan_time,stddev_plan_time,calls,total_exec_time,min_exec_time,max_exec_time,mean_exec_time,stddev_exec_time,rows,shared_blks_hit,shared_blks_read,shared_blks_dirtied,shared_blks_written,local_blks_hit,local_blks_read,local_blks_dirtied,local_blks_written,temp_blks_read,temp_blks_written,blk_read_time,blk_write_time,wal_records,wal_fpi,wal_bytes
+10,16385,-5792852134034941533,ALTER EXTENSION pg_stat_statements DROP FUNCTION pg_stat_statements(boolean),0,0,0,0,0,0,1,0.016796,0.016796,0.016796,0.016796,0,0,13,0,0,0,0,0,0,0,0,0,0,0,1,0,54
+10,16385,-1955052314674129380,DROP FUNCTION pg_stat_statements(boolean),0,0,0,0,0,0,1,0.061268,0.061268,0.061268,0.061268,0,0,17,0,0,0,0,0,0,0,0,0,0,0,2,0,108
+10,16385,-3085278641555168774,"/* contrib/pg_stat_statements/pg_stat_statements--1.4--1.5.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+GRANT EXECUTE ON FUNCTION pg_stat_statements_reset() TO pg_read_all_stats",0,0,0,0,0,0,1,2.184893,2.184893,2.184893,2.184893,0,0,25,3,1,0,0,0,0,0,0,0,0,0,5,1,8016
+10,16385,-5005008434753111192,"/* Then we can drop them */
+DROP FUNCTION pg_stat_statements_reset()",0,0,0,0,0,0,1,1.870985,1.870985,1.870985,1.870985,0,0,62,3,0,0,0,0,0,0,0,0,0,0,2,0,108
+10,16385,7101910292398537824,"CREATE VIEW pg_stat_statements AS
+  SELECT * FROM pg_stat_statements(true)",0,0,0,0,0,0,1,8.323148,8.323148,8.323148,8.323148,0,0,441,7,7,1,0,0,0,0,0,0,0,0,136,2,25680
+10,16385,62254661875268331,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,0.696581,0.696581,0.696581,0.696581,0,165,516,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7661414494490924538,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,10.509364999999999,10.509364999999999,10.509364999999999,10.509364999999999,0,5,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,9219655088872814515,"CREATE FUNCTION pg_stat_statements(IN showtext boolean,
+    OUT userid oid,
+    OUT dbid oid,
+    OUT queryid bigint,
+    OUT query text,
+    OUT calls int8,
+    OUT total_time float8,
+    OUT min_time float8,
+    OUT max_time float8,
+    OUT mean_time float8,
+    OUT stddev_time float8,
+    OUT rows int8,
+    OUT shared_blks_hit int8,
+    OUT shared_blks_read int8,
+    OUT shared_blks_dirtied int8,
+    OUT shared_blks_written int8,
+    OUT local_blks_hit int8,
+    OUT local_blks_read int8,
+    OUT local_blks_dirtied int8,
+    OUT local_blks_written int8,
+    OUT temp_blks_read int8,
+    OUT temp_blks_written int8,
+    OUT blk_read_time float8,
+    OUT blk_write_time float8
+)
+RETURNS SETOF record
+AS '$libdir/pg_stat_statements', 'pg_stat_statements_1_3'
+LANGUAGE C STRICT VOLATILE PARALLEL SAFE",0,0,0,0,0,0,1,15.454791,15.454791,15.454791,15.454791,0,0,156,5,2,0,0,0,0,0,0,0,0,0,9,1,8518
+10,16385,3180794906164314233,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,0.851628,0.851628,0.851628,0.851628,0,114,16,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3232140260748463617,"/* contrib/pg_stat_statements/pg_stat_statements--1.5--1.6.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+-- Execution is only allowed for superusers, fixing issue with 1.5.
+REVOKE EXECUTE ON FUNCTION pg_stat_statements_reset() FROM pg_read_all_stats",0,0,0,0,0,0,1,0.074173,0.074173,0.074173,0.074173,0,0,16,0,0,0,0,0,0,0,0,0,0,0,2,0,194
+10,16385,-1712481118449147880,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,7.357643,7.357643,7.357643,7.357643,0,165,975,3,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,5332373096099443151,"/* Then we can drop them */
+DROP VIEW pg_stat_statements",0,0,0,0,0,0,1,1.993383,1.993383,1.993383,1.993383,0,0,136,4,0,0,0,0,0,0,0,0,0,0,33,0,1782
+10,16385,1356024902385697363,"/* Now redefine */
+CREATE FUNCTION pg_stat_statements(IN showtext boolean,
+    OUT userid oid,
+    OUT dbid oid,
+    OUT queryid bigint,
+    OUT query text,
+    OUT plans int8,
+    OUT total_plan_time float8,
+    OUT min_plan_time float8,
+    OUT max_plan_time float8,
+    OUT mean_plan_time float8,
+    OUT stddev_plan_time float8,
+    OUT calls int8,
+    OUT total_exec_time float8,
+    OUT min_exec_time float8,
+    OUT max_exec_time float8,
+    OUT mean_exec_time float8,
+    OUT stddev_exec_time float8,
+    OUT rows int8,
+    OUT shared_blks_hit int8,
+    OUT shared_blks_read int8,
+    OUT shared_blks_dirtied int8,
+    OUT shared_blks_written int8,
+    OUT local_blks_hit int8,
+    OUT local_blks_read int8,
+    OUT local_blks_dirtied int8,
+    OUT local_blks_written int8,
+    OUT temp_blks_read int8,
+    OUT temp_blks_written int8,
+    OUT blk_read_time float8,
+    OUT blk_write_time float8,
+    OUT wal_records int8,
+    OUT wal_fpi int8,
+    OUT wal_bytes numeric
+)
+RETURNS SETOF record
+AS '$libdir/pg_stat_statements', 'pg_stat_statements_1_8'
+LANGUAGE C STRICT VOLATILE PARALLEL SAFE",0,0,0,0,0,0,1,0.88022,0.88022,0.88022,0.88022,0,0,147,1,1,0,0,0,0,0,0,0,0,0,9,1,8630
+10,16385,5647889157396938542,"-- Register a view on the function for ease of use.
+CREATE VIEW pg_stat_statements AS
+  SELECT * FROM pg_stat_statements(true)",0,0,0,0,0,0,1,28.240124,28.240124,28.240124,28.240124,0,0,337,46,23,0,0,0,0,0,0,0,0,0,105,19,85169
+10,16385,-3832115078929431881,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,79.472928,79.472928,79.472928,79.472928,0,114,519,44,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3928201315673746786,"-- Don't want this to be available to non-superusers.
+REVOKE ALL ON FUNCTION pg_stat_statements_reset() FROM PUBLIC",0,0,0,0,0,0,1,0.0336,0.0336,0.0336,0.0336,0,0,14,0,0,0,0,0,0,0,0,0,0,0,6,0,706
+10,16385,-3655516217747249099,"/* contrib/pg_stat_statements/pg_stat_statements--1.6--1.7.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+/* First we have to remove them from the extension */
+ALTER EXTENSION pg_stat_statements DROP FUNCTION pg_stat_statements_reset()",0,0,0,0,0,0,1,0.06793,0.06793,0.06793,0.06793,0,0,22,0,0,0,0,0,0,0,0,0,0,0,2,0,108
+10,16385,-6737802796196108371,"/* contrib/pg_stat_statements/pg_stat_statements--1.4.sql */
+
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+
+
+-- Register functions.
+CREATE FUNCTION pg_stat_statements_reset()
+RETURNS void
+AS '$libdir/pg_stat_statements'
+LANGUAGE C PARALLEL SAFE",0,0,0,0,0,0,1,99.593641,99.593641,99.593641,99.593641,0,0,32,31,6,0,0,0,0,0,0,0,0,0,9,5,30658
+10,16385,-2249120274633451873,"-- Don't want this to be available to non-superusers.
+REVOKE ALL ON FUNCTION pg_stat_statements_reset(Oid, Oid, bigint) FROM PUBLIC",0,0,0,0,0,0,1,0.072006,0.072006,0.072006,0.072006,0,0,10,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+10,16385,-5169817456611316777,create extension if not exists pg_stat_statements,0,0,0,0,0,0,1,252.698808,252.698808,252.698808,252.698808,0,0,1824,154,55,1,0,0,0,0,0,0,0,0,354,40,217730
+10,16385,-4315321953012072193,"/* contrib/pg_stat_statements/pg_stat_statements--1.7--1.8.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+/* First we have to remove them from the extension */
+ALTER EXTENSION pg_stat_statements DROP VIEW pg_stat_statements",0,0,0,0,0,0,1,0.123719,0.123719,0.123719,0.123719,0,0,112,0,0,0,0,0,0,0,0,0,0,0,2,0,108
+10,16385,435174621275570554,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,23.005029,23.005029,23.005029,23.005029,0,5,158,19,0,0,0,0,0,0,0,0,0,0,1,0,58
+10,16385,799551069846861821,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,0.11401800000000001,0.11401800000000001,0.11401800000000001,0.11401800000000001,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-5109480985238204195,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,6.028986,6.028986,6.028986,6.028986,0,1,62,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-8092650902402444792,GRANT SELECT ON pg_stat_statements TO PUBLIC,0,0,0,0,0,0,2,4.477868,0.262446,4.215422,2.2389340000000004,1.9764880000000002,0,64,7,3,0,0,0,0,0,0,0,0,0,6,2,12918
+10,16385,7360949727111689113,"/* Now redefine */
+CREATE FUNCTION pg_stat_statements_reset(IN userid Oid DEFAULT 0,
+	IN dbid Oid DEFAULT 0,
+	IN queryid bigint DEFAULT 0
+)
+RETURNS void
+AS '$libdir/pg_stat_statements', 'pg_stat_statements_reset_1_7'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,4.355686,4.355686,4.355686,4.355686,0,0,61,7,1,0,0,0,0,0,0,0,0,0,9,1,7630

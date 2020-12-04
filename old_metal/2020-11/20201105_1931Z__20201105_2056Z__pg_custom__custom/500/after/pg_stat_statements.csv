@@ -1,0 +1,804 @@
+userid,dbid,queryid,query,calls,total_time,min_time,max_time,mean_time,stddev_time,rows,shared_blks_hit,shared_blks_read,shared_blks_dirtied,shared_blks_written,local_blks_hit,local_blks_read,local_blks_dirtied,local_blks_written,temp_blks_read,temp_blks_written,blk_read_time,blk_write_time
+10,16385,4781283453004295250,GRANT EXECUTE ON FUNCTION pgstathashindex(regclass) TO pg_stat_scan_tables,1,0.019099,0.019099,0.019099,0.019099,0,0,12,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-6766677562622511123,COPY (SELECT * FROM pg_stat_statements) TO stdout WITH CSV HEADER,1,0.554898,0.554898,0.554898,0.554898,0,8,35,6,0,0,0,0,0,0,0,0,0,0
+16384,16385,8448155763064285664,"SELECT SUM(ol_amount)                 FROM order_line
+WHERE ol_o_id = d_no_o_id AND ol_d_id = d_d_id
+AND ol_w_id = d_w_id",40911610,8978323.18632636,0.0051730000000000005,31361.514796000003,0.21945660868211528,13.756068211395737,40911610,476531356,74,0,56,0,0,0,0,0,0,0,0
+16384,16385,-5864015298206844049,"SELECT o_id, o_carrier_id, o_entry_d 
+                                          FROM
+(SELECT o_id, o_carrier_id, o_entry_d
+FROM orders where o_d_id = os_d_id AND o_w_id = os_w_id and o_c_id=os_c_id
+ORDER BY o_id DESC) AS SUBQUERY
+LIMIT $4",4094065,4184756.7592589157,0.001053,41488.547804,1.0221520076645167,46.599401477483546,3292275,12956313,5710071,1032962,3955222,0,0,0,0,0,0,0,0
+10,16385,-3555780574714977554,"SELECT
+	schemaname AS schema_name, tablename AS table_name,
+	sml.relpages AS estimated_pages, target_pages,
+	ROUND(CASE WHEN target_pages = $1 THEN $2
+			   ELSE sml.relpages/target_pages::numeric END,$3)
+		AS estimated_bloat_multiple,
+	CASE WHEN relpages < target_pages
+		 THEN $4 ELSE relpages::bigint - target_pages END
+		AS estimated_pages_wasted,
+	estimated_bytes_per_tuple
+FROM (
+	SELECT
+		schemaname, tablename, cc.relpages, block_size,
+		CEIL(cc.reltuples::float /
+			CASE WHEN (block_size-page_header) / estimated_bytes_per_tuple = $5
+				 THEN $6
+				 ELSE ((block_size - page_header) / estimated_bytes_per_tuple)
+				 END) AS target_pages,
+		estimated_bytes_per_tuple
+	 FROM (
+		SELECT
+			max_align, block_size, schemaname, tablename, page_header,
+			(datawidth + max_align
+				- CASE WHEN datawidth % max_align = $7 THEN max_align
+						ELSE datawidth % max_align END
+				+ tuple_header + max_align
+				- CASE WHEN tuple_header % max_align = $8 THEN max_align
+						ELSE tuple_header % max_align END
+				+ (max_null_frac * (null_bitmap_size + max_align -
+					    CASE WHEN null_bitmap_size % max_align = $9
+					    THEN max_align
+					    ELSE null_bitmap_size % max_align END))
+				+ item_ptr)::bigint
+				AS estimated_bytes_per_tuple
+		FROM (
+			SELECT
+				schemaname, tablename, tuple_header, page_header, item_ptr,
+				max_align, block_size,
+				CEIL(SUM(($10 - null_frac) * avg_width))::bigint AS datawidth,
+				MAX(null_frac) AS max_null_frac,
+				(
+					SELECT COALESCE(count(*)/$11, $12)
+					FROM pg_stats s2
+					WHERE null_frac <> $13 AND s2.schemaname = s.schemaname AND
+						s2.tablename = s.tablename
+				) AS null_bitmap_size
+			FROM pg_stats s, (
+		       SELECT
+		         current_setting($14)::integer AS block_size,
+		         CASE WHEN substring(v,$15,$16) IN ($17,$18,$19)
+					  THEN $20 ELSE $21 END AS tuple_header,
+		         CASE WHEN substring(v,$22,$23) IN ($24,$25,$26)
+					  THEN $27 ELSE $28 END::integer AS page_header,
+		         $29 AS max_align,
+				 $30 AS item_ptr
+		       FROM (SELECT (string_to_array(version(), $31))[$32] AS v) AS foo
+			) AS constants
+			GROUP BY 1,2,3,4,5,6,7
+		) AS foo
+	) AS rs
+	JOIN pg_class cc ON cc.relname = rs.tablename AND cc.relkind != $33
+	JOIN pg_namespace nn ON cc.relnamespace = nn.oid
+		AND nn.nspname = rs.schemaname
+) AS sml",2,20.074839,8.951804000000001,11.123035,10.0374195,1.0856154999999994,96,5138,175,2,124,0,0,0,0,0,0,0,0
+16384,16385,535210619853203150,"SELECT i_price, i_name, i_data                                       FROM item WHERE i_id = no_ol_i_id",409372324,4610077.453316037,0.002018,13.429411,0.011261331514233188,0.056292023175070954,408958944,1227703592,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,4216081052665468451,select sum(xact_commit + xact_rollback) from pg_stat_database,2,20.544238999999997,10.270887,10.273352,10.272119499999999,0.0012324999999990816,2,1,1,0,1,0,0,0,0,0,0,0,0
+10,16385,9007054616624864831,COPY (SELECT sum(size) AS wal_size FROM pg_ls_waldir()) TO stdout WITH CSV HEADER,1,5.508749,5.508749,5.508749,5.508749,0,1,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-7736178542227309531,SHOW log_min_messages,3,0.003822,0.0008,0.002153,0.001274,0.0006221848599893765,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-1223765790011969516,"COPY (SELECT c.oid, c.relname, c.relkind, st.* FROM pg_class AS c, pgstattuple(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind IN ('r', 'i') ORDER BY relkind, relname) TO stdout WITH CSV HEADER",1,157467.544791,157467.544791,157467.544791,157467.544791,0,19,20741246,24788738,0,0,0,0,0,0,0,0,0,0
+10,13427,8716906036423547608,"/* pid could be NULL for prepared transactions, and DB oid could be 0
+		 * for shared relations, hence the LEFT JOIN being used below and the
+		 * convoluted way of getting database OID.
+		 *
+		 * The side effect of this is that the locks on shared objects will
+		 * appear to be taken under some database, specifically, under the
+		 * database to which the backend process is connected. And if the lock
+		 * on the shared object is taken by a prepared transaction, only then
+		 * would we see an empty string in database_name.
+		 *
+		 * Note: We do not support reporting on the 'userlock' locktype; this
+		 * locktype is provided by ancient contrib/userlock module.
+		 * TODO: Research and implement support for this.
+		 */
+SELECT ROW_NUMBER() OVER (PARTITION BY l.pid) AS lockrowid,
+		COALESCE(d.datname, $1)			AS database_name,
+		COALESCE(l.pid::bigint, $2)		AS procpid,
+		CASE
+		WHEN l.locktype IN ($3, $4, $5, $6) THEN
+			l.relation::text::numeric
+		WHEN l.locktype = $7 THEN
+			transactionid::text::numeric
+		WHEN l.locktype = $8 THEN
+			regexp_replace(l.virtualxid, $9, $10)::numeric
+		WHEN l.locktype IN ($11, $12) THEN
+			classid::text::numeric
+		ELSE
+			COALESCE(
+				l.relation::text::numeric, transactionid::text::numeric,
+				regexp_replace(l.virtualxid, $13, $14)::numeric,
+				classid::text::numeric, $15
+			)
+		END AS objid,
+		COALESCE(l.page::bigint, l.objid::bigint, $16)  AS objsubid,
+		COALESCE(l.tuple::bigint, l.objsubid::bigint, $17) AS objsubsubid,
+		l.locktype, l.mode AS lockmode, l.granted AS lockgranted
+FROM pg_catalog.pg_locks AS l LEFT JOIN
+	pg_catalog.pg_stat_activity AS sa ON l.pid = sa.pid JOIN
+	pg_catalog.pg_database AS d ON sa.datid = d.oid",14,283.26671799999997,1.098692,27.385548,20.233337000000002,5.775787973364772,93212,98,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-9104182951859350013,"SELECT s.schemaname as schema_name, s.relname as table_name, s.seq_scan, s.seq_tup_read, s.idx_scan, s.idx_tup_fetch, s.n_tup_ins, s.n_tup_upd, s.n_tup_del, s.n_tup_hot_upd, s.n_live_tup, s.n_dead_tup, s.last_vacuum, s.last_autovacuum, s.last_analyze, s.last_autoanalyze, i.heap_blks_read, i.heap_blks_hit, i.idx_blks_read, i.idx_blks_hit, i.toast_blks_read, i.toast_blks_hit, c.relpages AS analyze_pages, c.reltuples AS analyze_tuples, now() AS capture_time FROM pg_stat_all_tables s JOIN pg_statio_all_tables i ON s.relid = i.relid JOIN pg_class c ON s.relid = c.oid WHERE c.relkind != $1",2,6072.679896,13.091036,6059.58886,3036.339948,3023.248912,208,74,36,0,25,0,0,0,0,0,0,0,0
+16384,16385,-419445515445068817,"SELECT d_next_o_id                  FROM district
+    WHERE d_w_id=st_w_id AND d_id=st_d_id",4093781,685095.4376059918,0.0044410000000000005,323.677021,0.16735029001452498,0.7169140029072107,4093781,37320745,168,176,115,0,0,0,0,0,0,0,0
+16384,16385,4585908510153829407,"UPDATE customer
+SET c_balance = p_c_balance, c_data = p_c_new_data
+WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND
+c_id = p_c_id",19216624,1075695.8699438525,0.008351,10665.527511,0.05597735949581543,2.5932854913601253,19216624,146232967,1942679,15950857,1717925,0,0,0,0,0,0,0,0
+16384,16385,-1509001352764885261,"select payment($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",40927997,145842969.20870745,0.124892,44836.267538,3.563403535450051,56.937099665563046,40927997,2538881716,234344998,69749522,163592872,0,0,0,0,0,0,0,0
+10,13427,4390283800491518311,SELECT version(),446,2.636980999999997,0.003972,0.023086,0.0059125134529148,0.0018626396931507264,446,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-8610820246424350903,CREATE EXTENSION IF NOT EXISTS pgstattuple,1,12.14405,12.14405,12.14405,12.14405,0,0,1470,72,50,4,0,0,0,0,0,0,0,0
+10,16385,7678840415924500974,"COPY (SELECT oid, relname, relkind, pg_table_size(oid) AS size, pg_size_pretty(pg_table_size(oid)) AS size_pretty FROM pg_class WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind IN ($2, $3) ORDER BY relname) TO stdout WITH CSV HEADER",1,1.11885,1.11885,1.11885,1.11885,0,19,241,6,0,0,0,0,0,0,0,0,0,0
+10,16385,-4163465601477764766,COPY (SELECT * FROM pg_settings) TO stdout WITH CSV HEADER,1,1.0761,1.0761,1.0761,1.0761,0,325,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-6176019360056610466,"SELECT COALESCE(sum($1), $2) AS number_of_prepared_transactions FROM pg_catalog.pg_prepared_xacts",14,0.191849,0.010163,0.021247,0.013703499999999999,0.0034021527586011093,14,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7889668247544608713,REVOKE EXECUTE ON FUNCTION pgstatindex(text) FROM PUBLIC,1,0.018603,0.018603,0.018603,0.018603,0,0,9,0,0,0,0,0,0,0,0,0,0,0
+10,13427,3466096389063879580,SHOW hba_file,2,0.0074979999999999995,0.003286,0.004212,0.0037489999999999997,0.00046299999999999987,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,7895966737858895766,SELECT $1,3,0.006116,0.001657,0.00255,0.0020386666666666665,0.0003759187264408213,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-1893876962091545561,"SELECT c.relname AS index_name, r.relname AS table_name, i.indkey AS ind_keys FROM pg_catalog.pg_class c, pg_catalog.pg_namespace n, pg_catalog.pg_index i, pg_catalog.pg_class r WHERE c.relkind = $2 AND c.relnamespace = n.oid AND n.nspname = $1 AND c.oid = i.indexrelid AND r.oid = i.indrelid",42,23.415834999999998,0.114811,1.663517,0.5575198809523811,0.4203380169259589,1764,9394,140,0,92,0,0,0,0,0,0,0,0
+10,16385,-7114524403290099261,SELECT nspname AS schema_name FROM pg_catalog.pg_namespace WHERE nspname = $1 OR nspname NOT LIKE $2,14,0.179431,0.006863,0.020974,0.0128165,0.0036085304438629464,42,14,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-9141043935656865573,"CREATE FUNCTION pgstatindex(IN relname regclass,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindexbyid'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.081509,0.081509,0.081509,0.081509,0,0,71,1,1,0,0,0,0,0,0,0,0,0
+10,16385,-9214998881234992752,"SELECT	s.nspname AS schema_name, $1 AS package_name, f.proname AS function_name,
+		$2::""char"" AS function_type, f.prorettype::regtype AS return_type,
+		f.proargtypes::regtype[] AS arg_types,
+		fs.calls AS call_count, fs.total_time, fs.self_time
+FROM	pg_catalog.pg_namespace AS s				-- schema
+JOIN	pg_catalog.pg_proc AS f						-- function
+ON		f.pronamespace = s.oid
+JOIN	pg_catalog.pg_stat_user_functions AS fs		-- Func. stats
+ON		fs.funcid = f.oid",3,29.908724,2.659027,13.778663,9.969574666666666,5.170863196176845,0,40,206,0,144,0,0,0,0,0,0,0,0
+10,13427,-1893876962091545561,"SELECT c.relname AS index_name, r.relname AS table_name, i.indkey AS ind_keys FROM pg_catalog.pg_class c, pg_catalog.pg_namespace n, pg_catalog.pg_index i, pg_catalog.pg_class r WHERE c.relkind = $2 AND c.relnamespace = n.oid AND n.nspname = $1 AND c.oid = i.indexrelid AND r.oid = i.indrelid",38,22.118326,0.100135,3.083034,0.5820612105263158,0.5095954111776558,1624,8541,225,0,152,0,0,0,0,0,0,0,0
+16384,16385,-7905805567509321201,"INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id,
+h_w_id, h_date, h_amount, h_data)
+VALUES (p_c_d_id, p_c_w_id, p_c_id, p_d_id,
+p_w_id, tstamp, p_h_amount, h_data)",40927997,1173988.1826734007,0.003026,340.63246200000003,0.028684232523588826,0.8110092789477191,40927997,50998178,3083,392843,662456,0,0,0,0,0,0,0,0
+10,16385,-1053197692998249427,REVOKE EXECUTE ON FUNCTION pgstattuple(regclass) FROM PUBLIC,1,0.018395,0.018395,0.018395,0.018395,0,0,12,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,6703659376452535220,"UPDATE district SET d_next_o_id = d_next_o_id + $4 WHERE d_id = no_d_id AND d_w_id = no_w_id RETURNING d_next_o_id, d_tax",40936390,16379584.977273107,0.010783,52206.742319,0.40012284857727565,19.370803124558893,40936390,495500380,219942,218613,176979,0,0,0,0,0,0,0,0
+16384,16385,2318375009225089574,"select * from ostat($1,$2,$3,$4,$5) as (ol_i_id INTEGER,  ol_supply_w_id INTEGER, ol_quantity SMALLINT, ol_amount NUMERIC, ol_delivery_d TIMESTAMPTZ,  out_os_c_id INTEGER, out_os_c_last VARCHAR, os_c_first VARCHAR, os_c_middle VARCHAR, os_c_balance NUMERIC, os_o_id INTEGER, os_entdate TIMESTAMPtz, os_o_carrier_id SMALLINT)",4094065,19946431.07333669,0.053433,41489.787886000006,4.872035757453043,79.52364184712552,32919383,92424735,36193820,7877645,25052539,0,0,0,0,0,0,0,0
+10,16385,6575380484479358805,"SELECT c.relname AS view_name, c.relkind AS view_type, c.relispopulated AS ispopulated, spc.spcname AS tablespace_name, pg_get_userbyid(c.relowner) AS view_owner, pg_get_viewdef(c.oid, $2) AS definition FROM pg_catalog.pg_class c LEFT OUTER JOIN pg_tablespace spc on spc.oid=c.reltablespace LEFT OUTER JOIN pg_namespace n on n.oid=c.relnamespace WHERE (c.relkind = $3 OR c.relkind = $4) AND c.relnamespace = n.oid AND n.nspname = $1",42,973.539919,0.451907,52.394206,23.179521880952382,16.67715294820961,1778,72166,3042,0,2016,0,0,0,0,0,0,0,0
+10,16385,-5133820801638620109,"CREATE OR REPLACE FUNCTION pg_relpages(IN relname text)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpages_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.0494,0.0494,0.0494,0.0494,0,0,39,0,0,0,0,0,0,0,0,0,0,0
+10,13427,1498014034136010274,"SELECT datname AS database_name, datallowconn AS connections_allowed, pg_encoding_to_char(encoding) AS encoding, CASE WHEN oid > datlastsysoid THEN $1 ELSE $2 END AS system_database FROM pg_catalog.pg_database WHERE NOT datistemplate AND datallowconn",14,0.244554,0.013139000000000001,0.029056000000000002,0.017468142857142856,0.004327069494260899,28,14,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-8474462854878793032,"select slev($1,$2,$3)",4093781,44479546.059743546,0.459779,40192.912643,10.865150348722503,90.0754667109163,4093781,4262831105,751766,316280,495948,0,0,0,0,0,0,0,0
+10,16385,-1368367109486112334,"COPY (SELECT oid, datname, pg_database_size(oid) AS size, pg_size_pretty(pg_database_size(oid)) AS size_pretty FROM pg_database ORDER BY datname) TO stdout WITH CSV HEADER",1,5.573445,5.573445,5.573445,5.573445,0,4,156,6,0,0,0,0,0,0,0,0,0,0
+10,16385,5871932529255942364,"/* New stuff in 1.2 begins here */
+
+CREATE FUNCTION pgstattuple(IN reloid regclass,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuplebyid'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.086654,0.086654,0.086654,0.086654,0,0,68,1,1,0,0,0,0,0,0,0,0,0
+10,13427,6321497457064599433,SHOW logging_collector,3,0.003807,0.000971,0.001765,0.001269,0.00035309300002501706,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-3025636329378158246,SHOW log_filename,3,0.003776,0.000794,0.002043,0.0012586666666666666,0.0005577576136240146,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,6036219744207163361,"UPDATE orders SET o_carrier_id = d_o_carrier_id
+WHERE o_id = d_no_o_id AND o_d_id = d_d_id AND
+o_w_id = d_w_id",40911610,1999410.5902155514,0.0046240000000000005,28234.811009,0.04887147169751777,9.728396545549101,40911610,349836625,7187829,9042453,5301736,0,0,0,0,0,0,0,0
+10,13427,-4414173500990894660,SHOW client_min_messages,3,0.003934,0.000965,0.001883,0.0013113333333333332,0.00040723648603183327,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,1310191425066152134,SHOW log_hostname,3,0.002261,0.000636,0.000896,0.0007536666666666666,0.00010756806630635737,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,3387046326056488259,SELECT  upper(setting) FROM pg_settings WHERE name=$1,3,2.2869319999999997,0.6230129999999999,0.9890039999999999,0.7623106666666666,0.16169076439164837,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-4488053959279494118,SHOW log_checkpoints,3,0.0030979999999999996,0.00065,0.00155,0.0010326666666666665,0.00037956232104300805,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,5093536722758435631,SHOW debug_pretty_print,3,0.002938,0.000629,0.001182,0.0009793333333333334,0.000248738595495128,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-881659611999927945,"/* New stuff in 1.2 begins here */
+
+CREATE OR REPLACE FUNCTION pgstattuple(IN reloid regclass,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuplebyid_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.064871,0.064871,0.064871,0.064871,0,0,63,0,0,0,0,0,0,0,0,0,0,0
+10,13427,8587080389022159474,SHOW log_truncate_on_rotation,3,0.0059629999999999996,0.001477,0.00296,0.0019876666666666667,0.0006878344439050884,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-6209476769686484145,"/* New stuff in 1.3 begins here */
+
+CREATE FUNCTION pgstattuple_approx(IN reloid regclass,
+    OUT table_len BIGINT,               -- physical table length in bytes
+    OUT scanned_percent FLOAT8,         -- what percentage of the table's pages was scanned
+    OUT approx_tuple_count BIGINT,      -- estimated number of live tuples
+    OUT approx_tuple_len BIGINT,        -- estimated total length in bytes of live tuples
+    OUT approx_tuple_percent FLOAT8,    -- live tuples in % (based on estimate)
+    OUT dead_tuple_count BIGINT,        -- exact number of dead tuples
+    OUT dead_tuple_len BIGINT,          -- exact total length in bytes of dead tuples
+    OUT dead_tuple_percent FLOAT8,      -- dead tuples in % (based on estimate)
+    OUT approx_free_space BIGINT,       -- estimated free space in bytes
+    OUT approx_free_percent FLOAT8)     -- free space in % (based on estimate)
+AS '$libdir/pgstattuple', 'pgstattuple_approx'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.07097,0.07097,0.07097,0.07097,0,0,72,0,1,0,0,0,0,0,0,0,0,0
+10,13427,-4406002618850927616,"SELECT blocked_activity.pid                     AS blocked_pid,
+		blocked_activity.usename                 AS blocked_user,
+		blocked.mode                             AS locktype,
+		blocking_activity.pid                    AS blocking_pid,
+		blocking_activity.usename                AS blocking_user,
+		blocking_activity.datname                AS database_name,
+		now() - blocking_activity.query_start    AS blocking_duration,
+		now() - blocked_activity.query_start     AS blocked_duration,
+		blocking_activity.query_start            AS blocking_query_start,
+		blocked_activity.query_start             AS blocked_query_start,
+		blocked_activity.query                   AS blocked_statement,
+		blocking_activity.query                  AS current_statement_in_blocking_process,
+		blocked_activity.application_name        AS blocked_application,
+		blocking_activity.application_name       AS blocking_application
+	FROM pg_catalog.pg_stat_activity AS blocked_activity
+	JOIN pg_catalog.pg_stat_activity AS blocking_activity ON blocking_activity.pid = ANY (pg_blocking_pids(blocked_activity.pid))
+	JOIN pg_catalog.pg_locks AS blocked ON blocked.pid = blocked_activity.pid
+	WHERE NOT blocked.granted",14,7708.383094999999,0.8258519999999999,956.708895,550.5987924999998,235.79509243239096,46,117,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,7734250700467206409,"select delivery($1,$2)",4091161,173521519.71962157,1.343284,53270.845047,42.41375974194781,233.92480784589532,4091161,3499155301,82285664,85999727,61334217,0,0,0,0,0,0,0,0
+10,16385,-7272151605754324188,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,2,21.106089,10.513496,10.592593,10.5530445,0.03954850000000043,10,2,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-3735569893645297314,"UPDATE customer SET c_balance = p_c_balance
+WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND
+c_id = p_c_id",21711373,1234099.029028141,0.00062,338.054597,0.056841132480572994,0.8172765784648717,19204281,144222176,3969070,16208675,3032446,0,0,0,0,0,0,0,0
+16384,16385,-6429350979433877752,"SELECT c_balance, c_first, c_middle, c_last
+                                                      FROM customer
+WHERE c_id = os_c_id AND c_d_id = os_d_id AND c_w_id = os_w_id",1635999,656908.217555995,0.007757999999999999,10675.587911999999,0.4015333857514479,12.01258520322559,1635999,6852639,1384291,279759,961479,0,0,0,0,0,0,0,0
+10,16385,-7465348360820981658,"/* contrib/pgstattuple/pgstattuple--1.4.sql */
+
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+
+
+CREATE FUNCTION pgstattuple(IN relname text,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuple'
+LANGUAGE C STRICT PARALLEL SAFE",1,5.092521,5.092521,5.092521,5.092521,0,0,94,22,8,0,0,0,0,0,0,0,0,0
+16384,16385,-2587373995957382718,"UPDATE district SET d_ytd = d_ytd + p_h_amount
+WHERE d_w_id = p_w_id AND d_id = p_d_id",40927997,13514492.92728648,0.006484,44835.009429000005,0.33020166922141725,16.543269961873776,40927997,494606686,222609,220065,178184,0,0,0,0,0,0,0,0
+10,13427,-8742299787873414289,SELECT setting from pg_catalog.pg_settings where name = $1,12,7.705724,0.515842,0.9516140000000001,0.6421436666666667,0.12577293858400365,12,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,8512556722248587417,"INSERT INTO ORDERS (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (o_id, no_d_id, no_w_id, no_c_id, current_timestamp, no_o_ol_cnt, no_o_all_local)",40936390,5069087.338482437,0.011076,340.316652,0.12382839176788629,1.2863822687034356,40936390,347667348,30213604,31379798,22152525,0,0,0,0,0,0,0,0
+16384,16385,-2774539774756357613,"SELECT ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d, out_os_c_id, out_os_c_last, os_c_first, os_c_middle, os_c_balance, os_o_id, os_entdate, os_o_carrier_id	
+FROM order_line
+WHERE ol_o_id = os_o_id AND ol_d_id = os_d_id AND ol_w_id = os_w_id",4094065,7046136.470998914,0.000401,37351.637144,1.7210612120224886,41.202151314458675,0,18748602,8646866,3205969,5969882,0,0,0,0,0,0,0,0
+10,13427,8316398688943518660,SHOW log_line_prefix,3,0.0034679999999999997,0.00072,0.001566,0.001156,0.0003458670264711569,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,338292482059956270,SHOW log_min_error_statement,3,0.002789,0.000685,0.001343,0.0009296666666666666,0.0002939130634879792,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,5291912000738039513,"SELECT pg_catalog.version() AS version_string, ((select setting from pg_settings where name = $1)::decimal * (select setting from pg_settings where name = $2)::decimal / ($3 * $4))::numeric AS shared_buffers_mb, ((select setting from pg_settings where name = $5)::decimal * (select setting from pg_settings where name = $6)::decimal / ($7 * $8))::numeric AS temp_buffers_mb, ((select setting from pg_settings where name = $9)::decimal * (select setting from pg_settings where name = $10)::decimal / ($11 * $12))::numeric AS effective_cache_size_mb, ((select setting from pg_settings where name = $13)::decimal * (select setting from pg_settings where name = $14)::decimal / ($15 * $16))::numeric AS segment_size_mb, ((select setting from pg_settings where name = $17)::decimal * (select setting from pg_settings where name = $18)::decimal / ($19 * $20))::numeric AS wal_segment_size_mb, ((select setting from pg_settings where name = $21)::decimal * (select setting from pg_settings where name = $22)::decimal / ($23 * $24))::numeric AS wal_buffers_mb, (SELECT pg_postmaster_start_time())::timestamptz AS server_start_time",10,83.10473399999998,6.780282000000001,9.71267,8.3104734,0.9608006571897417,10,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,3774428674426749831,"SELECT s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10
+                                                                                                                                                                          FROM stock WHERE s_i_id = no_ol_i_id AND s_w_id = no_ol_supply_w_id",409372324,433239218.1775868,0.0025399999999999997,54137.717077,1.0583011913078606,36.708112156530866,408958944,1738818242,320219982,164448874,222273763,0,0,0,0,0,0,0,0
+10,16385,1594136720473630204,REVOKE EXECUTE ON FUNCTION pgstattuple_approx(regclass) FROM PUBLIC,1,0.018771,0.018771,0.018771,0.018771,0,0,8,0,0,0,0,0,0,0,0,0,0,0
+10,16385,5710526357416411007,GRANT EXECUTE ON FUNCTION pgstattuple(regclass) TO pg_stat_scan_tables,1,0.024455,0.024455,0.024455,0.024455,0,0,18,0,0,0,0,0,0,0,0,0,0,0
+10,16385,8395332438900674856,GRANT EXECUTE ON FUNCTION pg_relpages(text) TO pg_stat_scan_tables,1,0.019347,0.019347,0.019347,0.019347,0,0,15,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-9221933125350291022,"CREATE OR REPLACE FUNCTION pgstatindex(IN relname text,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindex_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.087463,0.087463,0.087463,0.087463,0,0,71,1,1,0,0,0,0,0,0,0,0,0
+10,16385,-1282174474636181276,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,2,0.22014499999999998,0.10925499999999999,0.11089,0.11007249999999999,0.0008175000000000023,2,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,387629091158505087,"UPDATE stock SET s_quantity = no_s_quantity
+WHERE s_i_id = no_ol_i_id
+AND s_w_id = no_ol_supply_w_id",409372324,13181969.136192236,0.002005,935.41818,0.032200440438612435,0.5880562587610103,408958944,2574837032,4962028,149816399,4488443,0,0,0,0,0,0,0,0
+10,16385,5353842540958846297,"CREATE OR REPLACE FUNCTION pg_relpages(IN relname regclass)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpagesbyid_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.040351,0.040351,0.040351,0.040351,0,0,36,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7239828280932003960,"COPY (SELECT oid, relname, relkind, pg_table_size(oid) AS size, pg_size_pretty(pg_table_size(oid)) AS size_pretty FROM pg_class WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind IN ('r', 'i') ORDER BY relname) TO stdout WITH CSV HEADER",1,2.019829,2.019829,2.019829,2.019829,0,19,496,13,0,0,0,0,0,0,0,0,0,0
+10,13427,-2647960285711445552,SHOW log_lock_waits,3,0.0028330000000000004,0.00062,0.001453,0.0009443333333333334,0.00036419439253722124,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7766681659969259930,GRANT EXECUTE ON FUNCTION pgstattuple_approx(regclass) TO pg_stat_scan_tables,1,0.019271,0.019271,0.019271,0.019271,0,0,14,0,0,0,0,0,0,0,0,0,0,0
+10,16385,1783548336943659886,"COPY (SELECT oid, datname, pg_database_size(oid) AS size, pg_size_pretty(pg_database_size(oid)) AS size_pretty FROM pg_database ORDER BY datname) TO stdout WITH CSV HEADER",1,4.755756,4.755756,4.755756,4.755756,0,4,4,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-8153513440251185629,SHOW debug_print_plan,3,0.002862,0.000637,0.001549,0.000954,0.0004210296901644824,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-923347108660113620,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,2,1.600554,0.740656,0.859898,0.800277,0.059621000000000035,228,29,7,0,0,0,0,0,0,0,0,0,0
+10,16385,8565171400252749021,COPY (SELECT sum(size) AS wal_size FROM pg_ls_waldir()) TO stdout WITH CSV HEADER,1,6.218933,6.218933,6.218933,6.218933,0,1,44,2,0,0,0,0,0,0,0,0,0,0
+10,16385,-9104182951859350013,"SELECT s.schemaname as schema_name, s.relname as table_name, s.seq_scan, s.seq_tup_read, s.idx_scan, s.idx_tup_fetch, s.n_tup_ins, s.n_tup_upd, s.n_tup_del, s.n_tup_hot_upd, s.n_live_tup, s.n_dead_tup, s.last_vacuum, s.last_autovacuum, s.last_analyze, s.last_autoanalyze, i.heap_blks_read, i.heap_blks_hit, i.idx_blks_read, i.idx_blks_hit, i.toast_blks_read, i.toast_blks_hit, c.relpages AS analyze_pages, c.reltuples AS analyze_tuples, now() AS capture_time FROM pg_stat_all_tables s JOIN pg_statio_all_tables i ON s.relid = i.relid JOIN pg_class c ON s.relid = c.oid WHERE c.relkind != $1",2,24.538888,11.917854,12.621034,12.269444,0.35158999999999985,228,110,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-9037368486022885083,"SELECT w_street_1, w_street_2, w_city, w_state, w_zip, w_name
+                                                                        FROM warehouse
+WHERE w_id = p_w_id",40927997,1816764.4745650692,0.0025239999999999998,191.50964000000002,0.0443892838089549,0.19107937192620497,40927997,287168617,3,105,2,0,0,0,0,0,0,0,0
+10,16385,4025368465343339790,REVOKE EXECUTE ON FUNCTION pgstatginindex(regclass) FROM PUBLIC,1,0.017773,0.017773,0.017773,0.017773,0,0,8,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-1074176117266427516,"SELECT c_first, c_middle, c_id,
+c_street_1, c_street_2, c_city, c_state, c_zip,
+c_phone, c_credit, c_credit_lim,
+c_discount, c_balance, c_since
+FROM customer
+WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_last = p_c_last
+ORDER BY c_first",24552368,2445740.0198234958,0.005317,253.187691,0.09961320308591998,0.6186329423294114,22045276,264610362,13594263,359,9315368,0,0,0,0,0,0,0,0
+10,16385,678564265944054083,"SELECT
+	$2 AS package_name, f.proname AS function_name, $3::""char"" AS function_type,
+	f.prorettype::regtype AS return_type, pg_get_function_identity_arguments(f.oid) AS arg_types,
+	f.probin AS function_binary, e.extname::text AS extension_name
+FROM
+	pg_catalog.pg_namespace AS s
+	JOIN	pg_catalog.pg_proc AS f
+		ON f.pronamespace = s.oid
+	LEFT JOIN pg_catalog.pg_depend AS d
+		ON (f.oid = d.objid AND d.classid = $4::regclass AND d.refclassid = $5::regclass)
+	LEFT JOIN pg_catalog.pg_extension AS e
+		ON (d.refobjid = e.oid)
+WHERE
+	s.nspname = $1",43,365.1462870000001,0.707771,31.919897000000002,8.491774116279068,8.56159541850159,45074,143353,3319,0,2274,0,0,0,0,0,0,0,0
+16384,16385,5616180274698321996,set CLIENT_MIN_MESSAGES TO 'ERROR',501,1.9224110000000005,0.001636,0.013881,0.003837147704590817,0.0014688206092560692,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-2485742924531423326,"SELECT c.relname AS sequence_name FROM pg_catalog.pg_class c, pg_catalog.pg_namespace n WHERE c.relkind = $2 AND c.relnamespace = n.oid AND n.nspname = $1",42,13.405784,0.088324,1.652945,0.3191853333333333,0.2760991773751277,0,429,117,0,78,0,0,0,0,0,0,0,0
+10,16385,5950549572551757791,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,2,1.305769,0.6274609999999999,0.678308,0.6528845,0.025423500000000043,330,1032,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-5061119907919067854,SELECT nspname FROM pg_namespace nsp JOIN pg_proc pro ON pronamespace=nsp.oid WHERE proname = $1,14,1.395791,0.060003999999999995,0.16612500000000002,0.09969935714285715,0.03289198812695697,0,71,13,0,10,0,0,0,0,0,0,0,0
+10,13427,-5446850752671536204,SHOW log_disconnections,3,0.004106,0.000706,0.001797,0.0013686666666666667,0.00047522228716909127,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,4390283800491518311,SELECT version(),298,1.7678589999999998,0.003918,0.023581,0.005932412751677853,0.001696681308868652,298,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-6363133595459221451,SELECT $1,156,0.548618,0.0017620000000000001,0.018781,0.003516782051282049,0.001745380894051171,156,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3845857942904937752,GRANT EXECUTE ON FUNCTION pgstatindex(text) TO pg_stat_scan_tables,1,0.025846,0.025846,0.025846,0.025846,0,0,15,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-6772960804622571856,"SELECT name, setting, unit FROM pg_catalog.pg_settings",14,13.225536,0.694299,1.389815,0.9446811428571429,0.21045737067629544,4550,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,431293040050433973,set client_encoding to 'UTF8',501,5.559865000000001,0.005899,0.036524,0.011097534930139723,0.003656819042591105,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-6566320076099828533,"/* New stuff in 1.5 begins here */
+
+CREATE OR REPLACE FUNCTION pgstathashindex(IN relname regclass,
+	OUT version INTEGER,
+	OUT bucket_pages BIGINT,
+	OUT overflow_pages BIGINT,
+	OUT bitmap_pages BIGINT,
+	OUT unused_pages BIGINT,
+	OUT live_items BIGINT,
+	OUT dead_items BIGINT,
+	OUT free_percent FLOAT8)
+AS '$libdir/pgstattuple', 'pgstathashindex'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.06173,0.06173,0.06173,0.06173,0,0,63,0,0,0,0,0,0,0,0,0,0,0
+10,13427,5403358905354068471,"SELECT i.schemaname AS schema_name, i.indexrelname AS index_name, s.idx_scan, s.idx_tup_read, s.idx_tup_fetch, i.idx_blks_read, i.idx_blks_hit FROM pg_stat_all_indexes s JOIN pg_statio_all_indexes i ON s.indexrelid = i.indexrelid",2,25.45353,11.644091000000001,13.809439,12.726765,1.082673999999999,308,3730,8,0,6,0,0,0,0,0,0,0,0
+10,16385,-8026329288367160423,"SELECT c.relname AS table_name, array_length(array_agg(i.indexrelid), $2) > $3 AS has_primary_key                                                                                                                    FROM
+    (SELECT oid AS coid, * FROM pg_catalog.pg_class c WHERE relkind IN ($4, $5)) c
+    JOIN pg_catalog.pg_namespace n ON (c.relnamespace = n.oid AND n.nspname = $1)
+    LEFT JOIN pg_catalog.pg_index i ON (i.indexrelid = c.coid AND i.indisprimary)
+GROUP BY c.relname",42,17.109959000000003,0.121017,1.642222,0.40737997619047617,0.25649004029410355,1050,1597,167,0,114,0,0,0,0,0,0,0,0
+10,16385,-2028750283664882377,"/* New stuff in 1.3 begins here */
+
+CREATE OR REPLACE FUNCTION pgstattuple_approx(IN reloid regclass,
+    OUT table_len BIGINT,               -- physical table length in bytes
+    OUT scanned_percent FLOAT8,         -- what percentage of the table's pages was scanned
+    OUT approx_tuple_count BIGINT,      -- estimated number of live tuples
+    OUT approx_tuple_len BIGINT,        -- estimated total length in bytes of live tuples
+    OUT approx_tuple_percent FLOAT8,    -- live tuples in % (based on estimate)
+    OUT dead_tuple_count BIGINT,        -- exact number of dead tuples
+    OUT dead_tuple_len BIGINT,          -- exact total length in bytes of dead tuples
+    OUT dead_tuple_percent FLOAT8,      -- dead tuples in % (based on estimate)
+    OUT approx_free_space BIGINT,       -- estimated free space in bytes
+    OUT approx_free_percent FLOAT8)     -- free space in % (based on estimate)
+AS '$libdir/pgstattuple', 'pgstattuple_approx_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.095762,0.095762,0.095762,0.095762,0,0,78,0,3,1,0,0,0,0,0,0,0,0
+10,16385,-9200501687501372896,"/* New stuff in 1.1 begins here */
+
+CREATE OR REPLACE FUNCTION pgstatginindex(IN relname regclass,
+    OUT version INT4,
+    OUT pending_pages INT4,
+    OUT pending_tuples BIGINT)
+AS '$libdir/pgstattuple', 'pgstatginindex_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.137239,0.137239,0.137239,0.137239,0,0,49,1,3,1,0,0,0,0,0,0,0,0
+10,13427,-1849589757827694553,SHOW syslog_ident,3,0.016856000000000003,0.004074,0.008109,0.005618666666666667,0.0017778302006159704,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-583053980741995473,GRANT EXECUTE ON FUNCTION pgstattuple(text) TO pg_stat_scan_tables,1,0.049097,0.049097,0.049097,0.049097,0,0,32,0,1,0,0,0,0,0,0,0,0,0
+16384,16385,-8052465060012368764,"SELECT c_balance, c_first, c_middle, c_id
+FROM customer
+WHERE c_last = os_c_last AND c_d_id = os_d_id AND c_w_id = os_w_id
+ORDER BY c_first",2458066,104313.27129800024,0.00526,111.665324,0.04243713199645818,0.18765447336481908,2207480,27616811,235622,37,161599,0,0,0,0,0,0,0,0
+16384,16385,-6988539292928998990,select max(w_id) from warehouse,500,49.048501999999985,0.050379,2.128783,0.09809700399999997,0.09633317853574638,500,1974,1,0,0,0,0,0,0,0,0,0,0
+10,13427,-9214998881234992752,"SELECT	s.nspname AS schema_name, $1 AS package_name, f.proname AS function_name,
+		$2::""char"" AS function_type, f.prorettype::regtype AS return_type,
+		f.proargtypes::regtype[] AS arg_types,
+		fs.calls AS call_count, fs.total_time, fs.self_time
+FROM	pg_catalog.pg_namespace AS s				-- schema
+JOIN	pg_catalog.pg_proc AS f						-- function
+ON		f.pronamespace = s.oid
+JOIN	pg_catalog.pg_stat_user_functions AS fs		-- Func. stats
+ON		fs.funcid = f.oid",3,38.151946,10.703804000000002,14.598604,12.717315333333334,1.5927918644496173,0,86,151,0,113,0,0,0,0,0,0,0,0
+10,16385,9123510028664027085,CREATE EXTENSION IF NOT EXISTS pg_prewarm,1,0.209942,0.209942,0.209942,0.209942,0,0,23,0,0,0,0,0,0,0,0,0,0,0
+10,13427,7768039520639902137,"SELECT usename, usesuper, valuntil, useconfig, now() as capture_time FROM pg_catalog.pg_user",3,0.08088300000000001,0.023989,0.029471,0.026961000000000002,0.002261734437697465,6,15,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-5789248710473232218,"SELECT
+	schemaname AS schema_name, tablename AS view_name,
+	sml.relpages AS estimated_pages, target_pages,
+	ROUND(CASE WHEN target_pages = $1 THEN $2
+			   ELSE sml.relpages/target_pages::numeric END,$3)
+		AS estimated_bloat_multiple,
+	CASE WHEN relpages < target_pages
+		 THEN $4 ELSE relpages::bigint - target_pages END
+		AS estimated_pages_wasted,
+	estimated_bytes_per_tuple
+FROM (
+	SELECT
+		schemaname, tablename, cc.relpages, block_size,
+		CEIL(cc.reltuples::float /
+			CASE WHEN (block_size-page_header) / estimated_bytes_per_tuple = $5
+				 THEN $6
+				 ELSE ((block_size - page_header) / estimated_bytes_per_tuple)
+				 END) AS target_pages,
+		estimated_bytes_per_tuple
+	 FROM (
+		SELECT
+			max_align, block_size, schemaname, tablename, page_header,
+			(datawidth + max_align
+				- CASE WHEN datawidth % max_align = $7 THEN max_align
+						ELSE datawidth % max_align END
+				+ tuple_header + max_align
+				- CASE WHEN tuple_header % max_align = $8 THEN max_align
+						ELSE tuple_header % max_align END
+				+ (max_null_frac * (null_bitmap_size + max_align -
+					    CASE WHEN null_bitmap_size % max_align = $9
+					    THEN max_align
+					    ELSE null_bitmap_size % max_align END))
+				+ item_ptr)::bigint
+				AS estimated_bytes_per_tuple
+		FROM (
+			SELECT
+				schemaname, tablename, tuple_header, page_header, item_ptr,
+				max_align, block_size,
+				CEIL(SUM(($10 - null_frac) * avg_width))::bigint AS datawidth,
+				MAX(null_frac) AS max_null_frac,
+				(
+					SELECT COALESCE(count(*)/$11, $12)
+					FROM pg_stats s2
+					WHERE null_frac <> $13 AND s2.schemaname = s.schemaname AND
+						s2.tablename = s.tablename
+				) AS null_bitmap_size
+			FROM pg_stats s, (
+		       SELECT
+		         current_setting($14)::integer AS block_size,
+		         CASE WHEN substring(v,$15,$16) IN ($17,$18,$19)
+					  THEN $20 ELSE $21 END AS tuple_header,
+		         CASE WHEN substring(v,$22,$23) IN ($24,$25,$26)
+					  THEN $27 ELSE $28 END::integer AS page_header,
+		         $29 AS max_align,
+				 $30 AS item_ptr
+		       FROM (SELECT (string_to_array(version(), $31))[$32] AS v) AS foo
+			) AS constants
+			GROUP BY 1,2,3,4,5,6,7
+		) AS foo
+	) AS rs
+	JOIN pg_class cc ON cc.relname = rs.tablename AND cc.relkind = $33
+	JOIN pg_namespace nn ON cc.relnamespace = nn.oid
+		AND nn.nspname = rs.schemaname
+) AS sml",2,25.688121000000002,11.393214,14.294907,12.844060500000001,1.4508465000000004,0,5159,183,10,131,0,0,0,0,0,0,0,0
+10,13427,678564265944054083,"SELECT
+	$2 AS package_name, f.proname AS function_name, $3::""char"" AS function_type,
+	f.prorettype::regtype AS return_type, pg_get_function_identity_arguments(f.oid) AS arg_types,
+	f.probin AS function_binary, e.extname::text AS extension_name
+FROM
+	pg_catalog.pg_namespace AS s
+	JOIN	pg_catalog.pg_proc AS f
+		ON f.pronamespace = s.oid
+	LEFT JOIN pg_catalog.pg_depend AS d
+		ON (f.oid = d.objid AND d.classid = $4::regclass AND d.refclassid = $5::regclass)
+	LEFT JOIN pg_catalog.pg_extension AS e
+		ON (d.refobjid = e.oid)
+WHERE
+	s.nspname = $1",44,367.39354299999997,0.555505,58.827631,8.349853249999999,9.889517893555766,44805,141563,2504,0,1619,0,0,0,0,0,0,0,0
+10,16385,8862327702913361285,"/* contrib/pgstattuple/pgstattuple--1.4--1.5.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+CREATE OR REPLACE FUNCTION pgstattuple(IN relname text,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuple_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.287038,0.287038,0.287038,0.287038,0,0,70,1,1,0,0,0,0,0,0,0,0,0
+10,16385,-8863090166992369258,COPY (SELECT * FROM pg_stat_statements) TO stdout WITH CSV HEADER,1,0.062338,0.062338,0.062338,0.062338,0,8,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,8791746904918487037,"COPY (SELECT c.oid, c.relname, st.* FROM pg_class AS c, pgstatindex(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind = 'i' ORDER BY relname) TO stdout WITH CSV HEADER",1,8753.543815,8753.543815,8753.543815,8753.543815,0,10,674,4047703,0,0,0,0,0,0,0,0,0,0
+10,16385,5885118335430618511,"COPY (SELECT c.oid, c.relname, st.* FROM pg_class AS c, pgstatindex(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind = $2 ORDER BY relname) TO stdout WITH CSV HEADER",1,8749.976473,8749.976473,8749.976473,8749.976473,0,10,413,4047703,0,0,0,0,0,0,0,0,0,0
+10,13427,-7114524403290099261,SELECT nspname AS schema_name FROM pg_catalog.pg_namespace WHERE nspname = $1 OR nspname NOT LIKE $2,15,0.16459500000000002,0.007125,0.015143,0.010973,0.0022328419260365627,45,15,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-1712481118449147880,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,2,4.983566,2.122865,2.860701,2.491783,0.3689180000000002,330,1900,8,0,0,0,0,0,0,0,0,0,0
+10,13427,-8828646613545995663,SHOW log_connections,3,0.0044930000000000005,0.00059,0.002381,0.0014976666666666667,0.0007313751127537465,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,3087330719923255368,SELECT * FROM pg_catalog.pg_rewrite WHERE ev_class = $1 AND rulename = $2,1778,22.594352000000015,0.0022180000000000004,1.592897,0.012707734533183355,0.05527754696380436,1778,3345,211,0,141,0,0,0,0,0,0,0,0
+10,13427,-418576097095865982,SELECT (setting::int/$1)::int FROM pg_settings WHERE name = $2,3,1.8210799999999998,0.540288,0.7144290000000001,0.6070266666666666,0.07668734059079702,3,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,4199956106828167744,"UPDATE warehouse SET w_ytd = w_ytd + p_h_amount
+WHERE w_id = p_w_id",40927997,31298457.7084157,0.012076,43375.012913,0.7647199961536332,16.8365716246544,40927997,367744067,215533,206493,186129,0,0,0,0,0,0,0,0
+10,13427,-6887975327946995770,SET client_encoding TO 'utf8',446,4.509187999999997,0.005668,0.020599,0.010110286995515692,0.0027481933630446927,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,2770885919814440481,"SELECT ct.conname, ct.conkey, ct.confkey, nl.nspname AS fknsp, cl.relname AS fktab, nr.nspname AS refnsp, cr.relname AS reftab FROM pg_constraint ct JOIN pg_class cl ON cl.oid = ct.conrelid JOIN pg_namespace nl ON nl.oid = cl.relnamespace JOIN pg_class cr ON cr.oid = ct.confrelid JOIN pg_namespace nr ON nr.oid = cr.relnamespace JOIN pg_catalog.pg_namespace nc ON nc.oid = ct.connamespace WHERE contype=$2 AND nc.nspname = $1",42,3.214148,0.009886,0.5001260000000001,0.07652733333333334,0.10449857233261876,0,5,37,0,23,0,0,0,0,0,0,0,0
+10,13427,2650940218892349018,SHOW debug_print_parse,3,0.005183,0.001363,0.001944,0.0017276666666666666,0.0002593483286153114,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,3010543408611823816,SHOW log_error_verbosity,3,0.003091,0.000772,0.001507,0.0010303333333333332,0.00033744958471188284,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-1194917419640136509,"SELECT c_first, c_middle, c_last,
+c_street_1, c_street_2, c_city, c_state, c_zip,
+c_phone, c_credit, c_credit_lim,
+c_discount, c_balance, c_since
+                                                                                                                                                                            FROM customer
+WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id",16375629,7389472.838175478,0.005022,36504.076652,0.4512481833933883,27.63920992618575,16375629,66437157,16066031,2760625,11137779,0,0,0,0,0,0,0,0
+10,13427,6610860889748119080,"SELECT checkpoints_timed, checkpoints_req, buffers_clean, buffers_checkpoint, maxwritten_clean, buffers_backend, buffers_alloc FROM pg_catalog.pg_stat_bgwriter",14,22893.563964000004,10.184634999999998,10082.076667000001,1635.2545688571429,2929.9696654797704,14,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7692802627618774262,"CREATE FUNCTION pg_relpages(IN relname text)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpages'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.270447,0.270447,0.270447,0.270447,0,0,40,1,4,1,0,0,0,0,0,0,0,0
+10,13427,8874842957009506731,SHOW log_duration,3,0.00363,0.000604,0.002183,0.00121,0.0006948990334333951,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-5728662229740608972,REVOKE EXECUTE ON FUNCTION pg_relpages(regclass) FROM PUBLIC,1,0.041898,0.041898,0.041898,0.041898,0,0,20,1,1,0,0,0,0,0,0,0,0,0
+10,16385,-8773329865684120251,"CREATE OR REPLACE FUNCTION pgstatindex(IN relname regclass,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindexbyid_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.079888,0.079888,0.079888,0.079888,0,0,68,1,1,0,0,0,0,0,0,0,0,0
+10,16385,4746814237094050184,"CREATE FUNCTION pg_relpages(IN relname regclass)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpagesbyid'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.057554,0.057554,0.057554,0.057554,0,0,41,1,1,0,0,0,0,0,0,0,0,0
+10,13427,8321828315682799558,SELECT (setting::int/($1*$2))::int FROM pg_settings WHERE name = $3,3,2.028444,0.531979,0.957444,0.676148,0.19892708405007767,3,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,6334289337078566938,"SELECT o_c_id             FROM orders
+WHERE o_id = d_no_o_id AND o_d_id = d_d_id AND
+o_w_id = d_w_id",40911610,29407981.113296732,0.003178,31581.138653,0.7188174973633068,24.364480759111675,40911610,200724962,3840907,2313752,2653472,0,0,0,0,0,0,0,0
+16384,16385,7300080156140774038,"SELECT count(c_id)              FROM customer
+WHERE c_last = os_c_last AND c_d_id = os_d_id AND c_w_id = os_w_id",2458066,7152023.15124499,0.010062,21902.532731,2.909613961238031,61.91987860944267,2458066,26023080,20216967,3331562,14004357,0,0,0,0,0,0,0,0
+10,13427,-2485742924531423326,"SELECT c.relname AS sequence_name FROM pg_catalog.pg_class c, pg_catalog.pg_namespace n WHERE c.relkind = $2 AND c.relnamespace = n.oid AND n.nspname = $1",42,10.374802,0.079705,0.879159,0.2470190952380953,0.143061980332337,0,428,118,0,83,0,0,0,0,0,0,0,0
+10,13427,-8506820586081797325,SELECT spcname AS tablespace_name FROM pg_catalog.pg_tablespace,14,0.098247,0.004459,0.012788,0.007017642857142856,0.002510888533884337,28,14,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,2180405251649949178,SELECT no_o_id                FROM new_order WHERE no_w_id = d_w_id AND no_d_id = d_d_id ORDER BY no_o_id ASC LIMIT $5,40911610,11397428.210145306,0.003794,13494.876345,0.2785866459458736,4.563291592072812,40911610,531583065,1073664,61145,744062,0,0,0,0,0,0,0,0
+16384,16385,350145126716322757,"select neword($1,$2,$3,$4,$5,$6)",40936390,566856725.2773919,0.359594,54201.691109,13.847257300350321,123.22525122718267,40936390,9177390513,392160914,363748527,286141792,0,0,0,0,0,0,0,0
+10,16385,-6887975327946995770,SET client_encoding TO 'utf8',298,3.0157869999999987,0.00586,0.048272,0.010120090604026842,0.0035033763937408233,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,3980337565283546250,"SELECT n.nspname AS schema_name, c.relname AS index_name, pg_relation_size(c.oid) / $1 AS index_size_mb FROM pg_class c, pg_namespace n WHERE c.relnamespace = n.oid AND c.relkind = $2",2,9.53462,4.00656,5.52806,4.76731,0.7607499999999998,330,2345,45,0,34,0,0,0,0,0,0,0,0
+10,13427,-2834190937518791816,SHOW log_directory,3,0.005145,0.001054,0.002914,0.001715,0.0008493067761415776,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,280100314666377612,"SELECT c_discount, c_last, c_credit, w_tax
+                                                     FROM customer, warehouse
+WHERE warehouse.w_id = no_w_id AND customer.c_w_id = no_w_id AND
+customer.c_d_id = no_d_id AND customer.c_id = no_c_id",40936390,23242099.462441754,0.009964,42241.775326999996,0.5677613356339244,23.7939178074736,40936390,458566357,34612486,6993390,24016222,0,0,0,0,0,0,0,0
+16384,16385,-8380073561014878083,"SELECT d_street_1, d_street_2, d_city, d_state, d_zip, d_name
+                                                                        FROM district
+WHERE d_w_id = p_w_id AND d_id = p_d_id",40927997,1321576.0282871488,0.002447,318.628962,0.03229026889067876,0.24950650961069878,40927997,374077340,1,50,3,0,0,0,0,0,0,0,0
+10,16385,2190393618323980000,"CREATE FUNCTION pgstatindex(IN relname text,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindex'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.272558,0.272558,0.272558,0.272558,0,0,80,0,2,0,0,0,0,0,0,0,0,0
+10,13427,-3924610105498757481,"SELECT COALESCE(d1.datname, $1) AS database_name, d1.numbackends, (
+        SELECT COALESCE(count(query)::bigint, $2::bigint)
+        FROM pg_catalog.pg_stat_activity
+        WHERE datname = d1.datname AND state = $3
+    ) AS idle_backends,
+    d1.xact_commit, d1.xact_rollback, d1.blks_hit,
+    $4::bigint AS blks_icache_hit, d1.blks_read, d1.tup_returned,
+    d1.tup_fetched, d1.tup_inserted, d1.tup_updated, d1.tup_deleted
+FROM pg_catalog.pg_stat_database d1",2,4772.951357,13.700099,4759.251258,2386.4756785000004,2372.7755795000003,10,322,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-2286245184544735808,"SELECT n.nspname AS schema_name, c.relname AS view_name, pg_relation_size(c.oid) / $1 AS mview_size_mb, pg_indexes_size(c.oid) / $2 AS size_of_indexes_mb, pg_total_relation_size(c.oid) / $3 AS total_mview_size_mb FROM pg_class c, pg_namespace n WHERE c.relnamespace = n.oid AND c.relkind = $4",2,0.500127,0.20611300000000002,0.294014,0.2500635,0.043950499999999997,0,10,16,0,8,0,0,0,0,0,0,0,0
+10,16385,-3832115078929431881,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,2,6.028906,2.659633,3.369273,3.014453,0.35482000000000014,228,986,72,0,0,0,0,0,0,0,0,0,0
+10,13427,-5547292198708549587,SHOW log_statement,3,0.002954,0.000588,0.001617,0.0009846666666666667,0.0004519323941574546,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,6575380484479358805,"SELECT c.relname AS view_name, c.relkind AS view_type, c.relispopulated AS ispopulated, spc.spcname AS tablespace_name, pg_get_userbyid(c.relowner) AS view_owner, pg_get_viewdef(c.oid, $2) AS definition FROM pg_catalog.pg_class c LEFT OUTER JOIN pg_tablespace spc on spc.oid=c.reltablespace LEFT OUTER JOIN pg_namespace n on n.oid=c.relnamespace WHERE (c.relkind = $3 OR c.relkind = $4) AND c.relnamespace = n.oid AND n.nspname = $1",42,994.418216,0.10630400000000001,56.383894,23.67662419047619,17.6847512041976,1764,70071,3569,0,2421,0,0,0,0,0,0,0,0
+10,13427,8887676621517593594,"SELECT datname AS database_name, spcname AS tablespace_name, pg_database_size(a.oid) / $1 AS database_size_mb FROM pg_catalog.pg_database a, pg_catalog.pg_tablespace b WHERE a.dattablespace = b.oid",2,5.158344,2.148293,3.0100510000000003,2.579172,0.43087900000000035,8,10,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-2994652966809217000,"SELECT COALESCE(sum($1), $2) AS number_of_wal_files FROM pg_ls_waldir() AS d (file) WHERE file ~ $3",14,814.4622400000001,11.657506999999999,87.928173,58.17587428571428,25.430234766123462,14,0,0,0,0,0,0,0,0,0,0,0,0
+10,13427,-7700662603662758466,SHOW debug_print_rewritten,3,0.0032960000000000003,0.000772,0.001587,0.0010986666666666666,0.0003518127658602261,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-1627277026996633940,"INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
+VALUES (o_id, no_d_id, no_w_id, loop_counter, no_ol_i_id, no_ol_supply_w_id, no_ol_quantity, no_ol_amount, no_ol_dist_info)",409372324,25949355.989649232,0.0034089999999999997,346.06438299999996,0.06338815417720645,1.012364950659987,409372324,2109419405,1562072,8560422,12635282,0,0,0,0,0,0,0,0
+10,13427,-3555780574714977554,"SELECT
+	schemaname AS schema_name, tablename AS table_name,
+	sml.relpages AS estimated_pages, target_pages,
+	ROUND(CASE WHEN target_pages = $1 THEN $2
+			   ELSE sml.relpages/target_pages::numeric END,$3)
+		AS estimated_bloat_multiple,
+	CASE WHEN relpages < target_pages
+		 THEN $4 ELSE relpages::bigint - target_pages END
+		AS estimated_pages_wasted,
+	estimated_bytes_per_tuple
+FROM (
+	SELECT
+		schemaname, tablename, cc.relpages, block_size,
+		CEIL(cc.reltuples::float /
+			CASE WHEN (block_size-page_header) / estimated_bytes_per_tuple = $5
+				 THEN $6
+				 ELSE ((block_size - page_header) / estimated_bytes_per_tuple)
+				 END) AS target_pages,
+		estimated_bytes_per_tuple
+	 FROM (
+		SELECT
+			max_align, block_size, schemaname, tablename, page_header,
+			(datawidth + max_align
+				- CASE WHEN datawidth % max_align = $7 THEN max_align
+						ELSE datawidth % max_align END
+				+ tuple_header + max_align
+				- CASE WHEN tuple_header % max_align = $8 THEN max_align
+						ELSE tuple_header % max_align END
+				+ (max_null_frac * (null_bitmap_size + max_align -
+					    CASE WHEN null_bitmap_size % max_align = $9
+					    THEN max_align
+					    ELSE null_bitmap_size % max_align END))
+				+ item_ptr)::bigint
+				AS estimated_bytes_per_tuple
+		FROM (
+			SELECT
+				schemaname, tablename, tuple_header, page_header, item_ptr,
+				max_align, block_size,
+				CEIL(SUM(($10 - null_frac) * avg_width))::bigint AS datawidth,
+				MAX(null_frac) AS max_null_frac,
+				(
+					SELECT COALESCE(count(*)/$11, $12)
+					FROM pg_stats s2
+					WHERE null_frac <> $13 AND s2.schemaname = s.schemaname AND
+						s2.tablename = s.tablename
+				) AS null_bitmap_size
+			FROM pg_stats s, (
+		       SELECT
+		         current_setting($14)::integer AS block_size,
+		         CASE WHEN substring(v,$15,$16) IN ($17,$18,$19)
+					  THEN $20 ELSE $21 END AS tuple_header,
+		         CASE WHEN substring(v,$22,$23) IN ($24,$25,$26)
+					  THEN $27 ELSE $28 END::integer AS page_header,
+		         $29 AS max_align,
+				 $30 AS item_ptr
+		       FROM (SELECT (string_to_array(version(), $31))[$32] AS v) AS foo
+			) AS constants
+			GROUP BY 1,2,3,4,5,6,7
+		) AS foo
+	) AS rs
+	JOIN pg_class cc ON cc.relname = rs.tablename AND cc.relkind != $33
+	JOIN pg_namespace nn ON cc.relnamespace = nn.oid
+		AND nn.nspname = rs.schemaname
+) AS sml",2,16.341772,4.975587,11.366185,8.170886,3.1952990000000003,78,4289,135,0,87,0,0,0,0,0,0,0,0
+10,16385,5316678639987306032,"/* New stuff in 1.1 begins here */
+
+CREATE FUNCTION pgstatginindex(IN relname regclass,
+    OUT version INT4,
+    OUT pending_pages INT4,
+    OUT pending_tuples BIGINT)
+AS '$libdir/pgstattuple', 'pgstatginindex'
+LANGUAGE C STRICT PARALLEL SAFE",1,0.072521,0.072521,0.072521,0.072521,0,0,59,0,1,0,0,0,0,0,0,0,0,0
+10,13427,3980337565283546250,"SELECT n.nspname AS schema_name, c.relname AS index_name, pg_relation_size(c.oid) / $1 AS index_size_mb FROM pg_class c, pg_namespace n WHERE c.relnamespace = n.oid AND c.relkind = $2",2,5.900884,2.681988,3.218896,2.950442,0.2684540000000001,308,2114,32,0,25,0,0,0,0,0,0,0,0
+10,13427,-8026329288367160423,"SELECT c.relname AS table_name, array_length(array_agg(i.indexrelid), $2) > $3 AS has_primary_key                                                                                                                    FROM
+    (SELECT oid AS coid, * FROM pg_catalog.pg_class c WHERE relkind IN ($4, $5)) c
+    JOIN pg_catalog.pg_namespace n ON (c.relnamespace = n.oid AND n.nspname = $1)
+    LEFT JOIN pg_catalog.pg_index i ON (i.indexrelid = c.coid AND i.indisprimary)
+GROUP BY c.relname",42,19.751577000000008,0.099211,1.4788679999999998,0.47027564285714285,0.24723831403890667,924,1354,284,0,204,0,0,0,0,0,0,0,0
+10,16385,-2286245184544735808,"SELECT n.nspname AS schema_name, c.relname AS view_name, pg_relation_size(c.oid) / $1 AS mview_size_mb, pg_indexes_size(c.oid) / $2 AS size_of_indexes_mb, pg_total_relation_size(c.oid) / $3 AS total_mview_size_mb FROM pg_class c, pg_namespace n WHERE c.relnamespace = n.oid AND c.relkind = $4",2,0.826417,0.327989,0.498428,0.4132085,0.0852195,0,11,15,0,12,0,0,0,0,0,0,0,0
+10,16385,-5642866422942357720,GRANT EXECUTE ON FUNCTION pg_relpages(regclass) TO pg_stat_scan_tables,1,0.040594,0.040594,0.040594,0.040594,0,0,28,1,1,0,0,0,0,0,0,0,0,0
+10,13427,-5169976569750367461,"SELECT datname AS database_name, pid AS procpid, usename, client_addr, client_port, backend_start,
+		xact_start, query_start, CASE WHEN wait_event IS NULL THEN $1 ELSE $2 END AS is_waiting,
+		state = $3 AS is_idle, state like $4 AS is_idle_in_transaction, query ilike $5 as is_vacuum,
+		client_port IS NULL AND (query like $6 OR query like $7) as is_autovacuum,
+		now() AS capture_time, wait_event, wait_event_type, query, state, state_change FROM pg_catalog.pg_stat_activity",5,11.424043000000001,0.258862,4.2275480000000005,2.2848086,1.5210702733388226,1616,25,0,0,0,0,0,0,0,0,0,0,0
+10,13427,3087330719923255368,SELECT * FROM pg_catalog.pg_rewrite WHERE ev_class = $1 AND rulename = $2,1764,22.301166000000023,0.002223,2.207195,0.012642384353741508,0.06434473649832863,1764,3319,209,0,144,0,0,0,0,0,0,0,0
+10,13427,-5789248710473232218,"SELECT
+	schemaname AS schema_name, tablename AS view_name,
+	sml.relpages AS estimated_pages, target_pages,
+	ROUND(CASE WHEN target_pages = $1 THEN $2
+			   ELSE sml.relpages/target_pages::numeric END,$3)
+		AS estimated_bloat_multiple,
+	CASE WHEN relpages < target_pages
+		 THEN $4 ELSE relpages::bigint - target_pages END
+		AS estimated_pages_wasted,
+	estimated_bytes_per_tuple
+FROM (
+	SELECT
+		schemaname, tablename, cc.relpages, block_size,
+		CEIL(cc.reltuples::float /
+			CASE WHEN (block_size-page_header) / estimated_bytes_per_tuple = $5
+				 THEN $6
+				 ELSE ((block_size - page_header) / estimated_bytes_per_tuple)
+				 END) AS target_pages,
+		estimated_bytes_per_tuple
+	 FROM (
+		SELECT
+			max_align, block_size, schemaname, tablename, page_header,
+			(datawidth + max_align
+				- CASE WHEN datawidth % max_align = $7 THEN max_align
+						ELSE datawidth % max_align END
+				+ tuple_header + max_align
+				- CASE WHEN tuple_header % max_align = $8 THEN max_align
+						ELSE tuple_header % max_align END
+				+ (max_null_frac * (null_bitmap_size + max_align -
+					    CASE WHEN null_bitmap_size % max_align = $9
+					    THEN max_align
+					    ELSE null_bitmap_size % max_align END))
+				+ item_ptr)::bigint
+				AS estimated_bytes_per_tuple
+		FROM (
+			SELECT
+				schemaname, tablename, tuple_header, page_header, item_ptr,
+				max_align, block_size,
+				CEIL(SUM(($10 - null_frac) * avg_width))::bigint AS datawidth,
+				MAX(null_frac) AS max_null_frac,
+				(
+					SELECT COALESCE(count(*)/$11, $12)
+					FROM pg_stats s2
+					WHERE null_frac <> $13 AND s2.schemaname = s.schemaname AND
+						s2.tablename = s.tablename
+				) AS null_bitmap_size
+			FROM pg_stats s, (
+		       SELECT
+		         current_setting($14)::integer AS block_size,
+		         CASE WHEN substring(v,$15,$16) IN ($17,$18,$19)
+					  THEN $20 ELSE $21 END AS tuple_header,
+		         CASE WHEN substring(v,$22,$23) IN ($24,$25,$26)
+					  THEN $27 ELSE $28 END::integer AS page_header,
+		         $29 AS max_align,
+				 $30 AS item_ptr
+		       FROM (SELECT (string_to_array(version(), $31))[$32] AS v) AS foo
+			) AS constants
+			GROUP BY 1,2,3,4,5,6,7
+		) AS foo
+	) AS rs
+	JOIN pg_class cc ON cc.relname = rs.tablename AND cc.relkind = $33
+	JOIN pg_namespace nn ON cc.relnamespace = nn.oid
+		AND nn.nspname = rs.schemaname
+) AS sml",2,45.547439000000004,6.493671,39.053768000000005,22.773719500000002,16.280048500000003,0,4128,140,0,100,0,0,0,0,0,0,0,0
+16384,16385,-3078489592644963703,DELETE FROM new_order WHERE no_w_id = d_w_id AND no_d_id = d_d_id AND no_o_id = d_no_o_id,40911610,7168059.886786224,0.003556,51045.161778,0.17520845272982014,25.40067501742416,40836242,245472294,164802,1009924,114745,0,0,0,0,0,0,0,0
+10,13427,-2671880588815399326,"SELECT n.nspname AS schema_name, c.relname AS table_name, pg_relation_size(c.oid) / $1 AS table_size_mb, pg_indexes_size(c.oid) / $2 AS size_of_indexes_mb, pg_total_relation_size(c.oid) / $3 AS total_table_size_mb FROM pg_class c, pg_namespace n WHERE c.relnamespace = n.oid AND c.relkind IN ($4, $5)",3,28.140438,8.590619,10.690785,9.380146,0.9332175860241098,198,3966,33,0,29,0,0,0,0,0,0,0,0
+16384,16385,838431727477019084,"SELECT count(c_id)              FROM customer
+WHERE c_last = p_c_last AND c_d_id = p_c_d_id AND c_w_id = p_c_w_id",24552368,70538948.93150315,0.008851999999999999,43376.345541,2.8729998235410426,62.713797009151214,24552368,242973352,196209326,33211642,135897106,0,0,0,0,0,0,0,0
+10,16385,3054876908056495962,GRANT EXECUTE ON FUNCTION pgstatginindex(regclass) TO pg_stat_scan_tables,1,0.019833,0.019833,0.019833,0.019833,0,0,14,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-4304855773095583397,"WITH
+settings (block_size, shared_buffers, effective_cache_size) AS (
+    VALUES (pg_size_bytes(current_setting($1)),
+            pg_size_bytes(current_setting($2)),
+            pg_size_bytes(current_setting($3)))
+),
+rels (oid, size) AS (
+    SELECT oid, sum(relpages) OVER (ORDER BY relpages)
+    FROM pg_class
+    WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $4)
+      AND relkind IN ($5, $6)
+)
+SELECT pg_prewarm(r.oid, CASE WHEN r.size * s.block_size <= s.shared_buffers THEN $7 ELSE $8 END)
+FROM rels AS r,
+     settings AS s
+WHERE r.size * s.block_size <= GREATEST(s.shared_buffers, s.effective_cache_size)",1,142122.19243000002,142122.19243000002,142122.19243000002,142122.19243000002,0,19,99594,1188892,0,0,0,0,0,0,0,0,0,0
+10,13427,2296680990060135499,"SELECT spcname AS tablespace_name, pg_catalog.pg_tablespace_size(oid) / $1 AS tablespace_size_mb FROM pg_catalog.pg_tablespace",3,9.925267000000002,2.754055,4.3382890000000005,3.3084223333333336,0.7289371503265714,6,3,0,0,0,0,0,0,0,0,0,0,0
+10,16385,8922248966408053823,"COPY (SELECT c.oid, c.relname, c.relkind, st.* FROM pg_class AS c, pgstattuple(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind IN ($2, $3) ORDER BY relkind, relname) TO stdout WITH CSV HEADER",1,157466.029274,157466.029274,157466.029274,157466.029274,0,19,20740918,24788738,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7781024909404130612,"UPDATE customer SET c_balance = c_balance + d_ol_total
+WHERE c_id = d_c_id AND c_d_id = d_d_id AND
+c_w_id = d_w_id",40911610,15918829.42624556,0.008027,42860.659624,0.3891029814335608,21.657928967827804,40911610,237167332,35899267,37097697,25047784,0,0,0,0,0,0,0,0
+16384,16385,7168736505462475819,"SELECT COUNT(DISTINCT s_i_id)                      FROM order_line, stock
+    WHERE ol_w_id = st_w_id AND
+        ol_d_id = st_d_id AND (ol_o_id < st_o_id) AND
+        ol_o_id >= (st_o_id - $6) AND s_w_id = st_w_id AND
+        s_i_id = ol_i_id AND s_quantity < threshold",4093781,42692441.574286506,0.421558,40187.932538,10.428609047305592,90.04253998262783,4093781,4225343867,751574,316058,495813,0,0,0,0,0,0,0,0
+10,13427,-5061119907919067854,SELECT nspname FROM pg_namespace nsp JOIN pg_proc pro ON pronamespace=nsp.oid WHERE proname = $1,14,2.0664320000000003,0.047182,0.391144,0.1476022857142857,0.09678628960271814,0,71,13,0,10,0,0,0,0,0,0,0,0
+16384,16385,8542702090381103935,"SELECT c_data               FROM customer
+WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id",19216624,387664.812475915,0.003129,73.54720200000001,0.020173408839968248,0.1377697078164011,19216624,94888517,2122002,4714,1465070,0,0,0,0,0,0,0,0
+10,16385,5403358905354068471,"SELECT i.schemaname AS schema_name, i.indexrelname AS index_name, s.idx_scan, s.idx_tup_read, s.idx_tup_fetch, i.idx_blks_read, i.idx_blks_hit FROM pg_stat_all_indexes s JOIN pg_statio_all_indexes i ON s.indexrelid = i.indexrelid",2,25.163316000000002,11.754077,13.409239,12.581658000000001,0.8275809999999999,330,3991,11,0,7,0,0,0,0,0,0,0,0
+10,16385,-8523811733626467755,REVOKE EXECUTE ON FUNCTION pgstathashindex(regclass) FROM PUBLIC,1,0.021446,0.021446,0.021446,0.021446,0,0,7,0,0,0,0,0,0,0,0,0,0,0
+10,16385,435174621275570554,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,2,23.875322,11.701396,12.173926,11.937661,0.2362649999999995,10,268,55,0,0,0,0,0,0,0,0,0,0
+16384,16385,-152674211127181809,"UPDATE order_line SET ol_delivery_d = current_timestamp
+WHERE ol_o_id = d_no_o_id AND ol_d_id = d_d_id AND
+ol_w_id = d_w_id",40911610,92914600.65414861,0.012288,53188.959453,2.2711059441110595,51.750611451649334,409116170,1457398241,34118989,36313196,27472228,0,0,0,0,0,0,0,0
+16384,16385,8629570183592985742,"INSERT INTO NEW_ORDER (no_o_id, no_d_id, no_w_id) VALUES (o_id, no_d_id, no_w_id)",40936390,2091568.6739146959,0.004529,340.11846,0.05109313923173791,0.8022357790275978,40936390,208002133,370436,460743,398247,0,0,0,0,0,0,0,0
+10,16385,-5109480985238204195,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,2,0.980065,0.454522,0.525543,0.4900325,0.0355105,2,123,5,0,0,0,0,0,0,0,0,0,0
+10,16385,8476351455718547263,REVOKE EXECUTE ON FUNCTION pgstattuple(text) FROM PUBLIC,1,0.167771,0.167771,0.167771,0.167771,0,0,33,8,4,0,0,0,0,0,0,0,0,0
+10,16385,8073967179673371483,REVOKE EXECUTE ON FUNCTION pg_relpages(text) FROM PUBLIC,1,0.021475,0.021475,0.021475,0.021475,0,0,9,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-7053481684217008096,REVOKE EXECUTE ON FUNCTION pgstatindex(regclass) FROM PUBLIC,1,0.018911,0.018911,0.018911,0.018911,0,0,10,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-6677403096909041306,select sum(d_next_o_id) from district,2,946.65998,117.509987,829.149993,473.32998999999995,355.820003,2,18371,18786,0,13642,0,0,0,0,0,0,0,0
+10,16385,7197326979178551549,GRANT EXECUTE ON FUNCTION pgstatindex(regclass) TO pg_stat_scan_tables,1,0.056378,0.056378,0.056378,0.056378,0,0,27,0,4,1,0,0,0,0,0,0,0,0
+16384,16385,-6709095786360440765,select max(d_id) from district,500,7069.010757000005,1.80166,254.81605299999998,14.138021513999997,17.256479945696686,500,1247598,121,0,105,0,0,0,0,0,0,0,0
+10,13427,-3977911648357329058,SHOW log_destination,3,0.0075060000000000005,0.001936,0.003348,0.002502,0.000609500341810131,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-2671880588815399326,"SELECT n.nspname AS schema_name, c.relname AS table_name, pg_relation_size(c.oid) / $1 AS table_size_mb, pg_indexes_size(c.oid) / $2 AS size_of_indexes_mb, pg_total_relation_size(c.oid) / $3 AS total_table_size_mb FROM pg_class c, pg_namespace n WHERE c.relnamespace = n.oid AND c.relkind IN ($4, $5)",2,24.186889,10.813748,13.373141,12.0934445,1.2796965,150,3002,54,0,35,0,0,0,0,0,0,0,0
+10,16385,2770885919814440481,"SELECT ct.conname, ct.conkey, ct.confkey, nl.nspname AS fknsp, cl.relname AS fktab, nr.nspname AS refnsp, cr.relname AS reftab FROM pg_constraint ct JOIN pg_class cl ON cl.oid = ct.conrelid JOIN pg_namespace nl ON nl.oid = cl.relnamespace JOIN pg_class cr ON cr.oid = ct.confrelid JOIN pg_namespace nr ON nr.oid = cr.relnamespace JOIN pg_catalog.pg_namespace nc ON nc.oid = ct.connamespace WHERE contype=$2 AND nc.nspname = $1",42,2.5015630000000004,0.013894,0.381372,0.05956102380952379,0.05521549268849068,0,2,40,0,22,0,0,0,0,0,0,0,0
+10,16385,7104491036261723972,COPY (SELECT * FROM pg_settings) TO stdout WITH CSV HEADER,1,1.926731,1.926731,1.926731,1.926731,0,325,35,4,0,0,0,0,0,0,0,0,0,0

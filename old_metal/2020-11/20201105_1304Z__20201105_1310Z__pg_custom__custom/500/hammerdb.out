@@ -1,0 +1,1873 @@
+HammerDB CLI v3.3
+Copyright (C) 2003-2019 Steve Shaw
+Type "help" for a list of commands
+The xml is well-formed, applying configuration
+Database set to PostgreSQL
+Changed tpcc:pg_rampup from 2 to 10 for PostgreSQL
+Changed tpcc:pg_duration from 5 to 120 for PostgreSQL
+Clearing Script, reload script to activate new setting
+Script cleared
+Changed tpcc:pg_driver from test to timed for PostgreSQL
+Changed tpcc:pg_total_iterations from 1000000 to 1000000000 for PostgreSQL
+Changed tpcc:pg_raiseerror from false to 1 for PostgreSQL
+Changed tpcc:pg_timeprofile from false to true for PostgreSQL
+Value false for tpcc:pg_keyandthink is the same as existing value false, no change made
+Changed connection:pg_host from localhost to 172.31.40.242 for PostgreSQL
+Value 5432 for connection:pg_port is the same as existing value 5432, no change made
+Changed tpcc:pg_rampup from 10 to 5 for PostgreSQL
+Changed tpcc:pg_duration from 120 to 60 for PostgreSQL
+Benchmark set to TPC-C
+Dictionary Settings for PostgreSQL
+connection {
+ pg_host = 172.31.40.242
+ pg_port = 5432
+}
+tpcc       {
+ pg_count_ware       = 1
+ pg_num_vu           = 1
+ pg_superuser        = postgres
+ pg_superuserpass    = postgres
+ pg_defaultdbase     = postgres
+ pg_user             = tpcc
+ pg_pass             = tpcc
+ pg_dbase            = tpcc
+ pg_vacuum           = false
+ pg_dritasnap        = false
+ pg_oracompat        = false
+ pg_storedprocs      = false
+ pg_total_iterations = 1000000000
+ pg_raiseerror       = 1
+ pg_keyandthink      = false
+ pg_driver           = timed
+ pg_rampup           = 5
+ pg_duration         = 60
+ pg_allwarehouse     = false
+ pg_timeprofile      = true
+ pg_async_scale      = false
+ pg_async_client     = 10
+ pg_async_verbose    = false
+ pg_async_delay      = 1000
+}
+TPC-C Driver Script
+Script loaded, Type "print script" to view
+#!/usr/local/bin/tclsh8.6
+#EDITABLE OPTIONS##################################################
+set library Pgtcl ;# PostgreSQL Library
+set total_iterations 1000000000 ;# Number of transactions before logging off
+set RAISEERROR "1" ;# Exit script on PostgreSQL (true or false)
+set KEYANDTHINK "false" ;# Time for user thinking and keying (true or false)
+set rampup 5;  # Rampup time in minutes before first Transaction Count is taken
+set duration 60;  # Duration in minutes before second Transaction Count is taken
+set mode "Local" ;# HammerDB operational mode
+set VACUUM "false" ;# Perform checkpoint and vacuuum when complete (true or false)
+set DRITA_SNAPSHOTS "false";#Take DRITA Snapshots
+set ora_compatible "false" ;#Postgres Plus Oracle Compatible Schema
+set pg_storedprocs "false" ;#Postgres v11 Stored Procedures
+set host "172.31.40.242" ;# Address of the server hosting PostgreSQL
+set port "5432" ;# Port of the PostgreSQL server
+set superuser "postgres" ;# Superuser privilege user
+set superuser_password "postgres" ;# Password for Superuser
+set default_database "postgres" ;# Default Database for Superuser
+set user "tpcc" ;# PostgreSQL user
+set password "tpcc" ;# Password for the PostgreSQL user
+set db "tpcc" ;# Database containing the TPC Schema
+set timeprofile "true";# Output virtual user response times
+#EDITABLE OPTIONS##################################################
+#LOAD LIBRARIES AND MODULES
+if [catch {package require $library} message] { error "Failed to load $library - $message" }
+if [catch {::tcl::tm::path add modules} ] { error "Failed to find modules directory" }
+if [catch {package require tpcccommon} ] { error "Failed to load tpcc common functions" } else { namespace import tpcccommon::* }
+
+if { [ chk_thread ] eq "FALSE" } {
+error "PostgreSQL Timed Script must be run in Thread Enabled Interpreter"
+}
+
+proc ConnectToPostgres { host port user password dbname } {
+global tcl_platform
+if {[catch {set lda [pg_connect -conninfo [list host = $host port = $port user = $user password = $password dbname = $dbname ]]} message]} {
+set lda "Failed" ; puts $message
+error $message
+ } else {
+if {$tcl_platform(platform) == "windows"} {
+#Workaround for Bug #95 where first connection fails on Windows
+catch {pg_disconnect $lda}
+set lda [pg_connect -conninfo [list host = $host port = $port user = $user password = $password dbname = $dbname ]]
+        }
+pg_notice_handler $lda puts
+set result [ pg_exec $lda "set CLIENT_MIN_MESSAGES TO 'ERROR'" ]
+pg_result $result -clear
+        }
+return $lda
+}
+set rema [ lassign [ findvuposition ] myposition totalvirtualusers ]
+switch $myposition {
+1 { 
+if { $mode eq "Local" || $mode eq "Master" } {
+if { ($DRITA_SNAPSHOTS eq "true") || ($VACUUM eq "true") } {
+set lda [ ConnectToPostgres $host $port $superuser $superuser_password $default_database ]
+if { $lda eq "Failed" } {
+error "error, the database connection to $host could not be established"
+ 	} 
+}
+set lda1 [ ConnectToPostgres $host $port $user $password $db ]
+if { $lda1 eq "Failed" } {
+error "error, the database connection to $host could not be established"
+ 	} 
+set ramptime 0
+puts "Beginning rampup time of $rampup minutes"
+set rampup [ expr $rampup*60000 ]
+while {$ramptime != $rampup} {
+if { [ tsv::get application abort ] } { break } else { after 6000 }
+set ramptime [ expr $ramptime+6000 ]
+if { ![ expr {$ramptime % 60000} ] } {
+puts "Rampup [ expr $ramptime / 60000 ] minutes complete ..."
+	}
+}
+if { [ tsv::get application abort ] } { break }
+if { $DRITA_SNAPSHOTS eq "true" } {
+puts "Rampup complete, Taking start DRITA snapshot."
+set result [pg_exec $lda "select * from edbsnap()" ]
+if {[pg_result $result -status] ni {"PGRES_TUPLES_OK" "PGRES_COMMAND_OK"}} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "DRITA Snapshot Error set RAISEERROR for Details"
+		}
+	} else {
+pg_result $result -clear
+pg_select $lda {select edb_id,snap_tm from edb$snap order by edb_id desc limit 1} snap_arr {
+set firstsnap $snap_arr(edb_id)
+set first_snaptime $snap_arr(snap_tm)
+	}
+puts "Start Snapshot $firstsnap taken at $first_snaptime"
+	}
+   } else {
+puts "Rampup complete, Taking start Transaction Count."
+	}
+pg_select $lda1 "select sum(xact_commit + xact_rollback) from pg_stat_database" tx_arr {
+set start_trans $tx_arr(sum)
+	}
+pg_select $lda1 "select sum(d_next_o_id) from district" o_id_arr {
+set start_nopm $o_id_arr(sum)
+	}
+puts "Timing test period of $duration in minutes"
+set testtime 0
+set durmin $duration
+set duration [ expr $duration*60000 ]
+while {$testtime != $duration} {
+if { [ tsv::get application abort ] } { break } else { after 6000 }
+set testtime [ expr $testtime+6000 ]
+if { ![ expr {$testtime % 60000} ] } {
+puts -nonewline  "[ expr $testtime / 60000 ]  ...,"
+	}
+}
+if { [ tsv::get application abort ] } { break }
+if { $DRITA_SNAPSHOTS eq "true" } {
+puts "Test complete, Taking end DRITA snapshot."
+set result [pg_exec $lda "select * from edbsnap()" ]
+if {[pg_result $result -status] ni {"PGRES_TUPLES_OK" "PGRES_COMMAND_OK"}} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Snapshot Error set RAISEERROR for Details"
+		}
+	} else {
+pg_result $result -clear
+pg_select $lda {select edb_id,snap_tm from edb$snap order by edb_id desc limit 1} snap_arr  {
+set endsnap $snap_arr(edb_id)
+set end_snaptime $snap_arr(snap_tm)
+	}
+puts "End Snapshot $endsnap taken at $end_snaptime"
+puts "Test complete: view DRITA report from SNAPID $firstsnap to $endsnap"
+	}
+   } else {
+puts "Test complete, Taking end Transaction Count."
+	}
+pg_select $lda1 "select sum(xact_commit + xact_rollback) from pg_stat_database" tx_arr {
+set end_trans $tx_arr(sum)
+	}
+pg_select $lda1 "select sum(d_next_o_id) from district" o_id_arr {
+set end_nopm $o_id_arr(sum)
+	}
+set tpm [ expr {($end_trans - $start_trans)/$durmin} ]
+set nopm [ expr {($end_nopm - $start_nopm)/$durmin} ]
+puts "[ expr $totalvirtualusers - 1 ] Active Virtual Users configured"
+puts "TEST RESULT : System achieved $tpm PostgreSQL TPM at $nopm NOPM"
+tsv::set application abort 1
+if { $mode eq "Master" } { eval [subst {thread::send -async $MASTER { remote_command ed_kill_vusers }}] }
+if { $VACUUM } {
+	set RAISEERROR "true"
+puts "Checkpoint and Vacuum"
+set result [pg_exec $lda "checkpoint" ]
+if {[pg_result $result -status] ni {"PGRES_TUPLES_OK" "PGRES_COMMAND_OK"}} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Checkpoint Error set RAISEERROR for Details"
+		}
+	} else {
+pg_result $result -clear
+	}
+set result [pg_exec $lda "vacuum" ]
+if {[pg_result $result -status] ni {"PGRES_TUPLES_OK" "PGRES_COMMAND_OK"}} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Vacuum Error set RAISEERROR for Details"
+		}
+	} else {
+puts "Checkpoint and Vacuum Complete"
+pg_result $result -clear
+	}
+}
+if { ($DRITA_SNAPSHOTS eq "true") || ($VACUUM eq "true") } {
+pg_disconnect $lda
+	}
+pg_disconnect $lda1
+		} else {
+puts "Operating in Slave Mode, No Snapshots taken..."
+		}
+	}
+default {
+if {$timeprofile eq "true" && $myposition eq 2} {package require etprof}
+#TIMESTAMP
+proc gettimestamp { } {
+set tstamp [ clock format [ clock seconds ] -format %Y%m%d%H%M%S ]
+return $tstamp
+}
+#NEW ORDER
+proc neword { lda no_w_id w_id_input RAISEERROR ora_compatible pg_storedprocs } {
+#2.4.1.2 select district id randomly from home warehouse where d_w_id = d_id
+set no_d_id [ RandomNumber 1 10 ]
+#2.4.1.2 Customer id randomly selected where c_d_id = d_id and c_w_id = w_id
+set no_c_id [ RandomNumber 1 3000 ]
+#2.4.1.3 Items in the order randomly selected from 5 to 15
+set ol_cnt [ RandomNumber 5 15 ]
+#2.4.1.6 order entry date O_ENTRY_D generated by SUT
+set date [ gettimestamp ]
+if { $ora_compatible eq "true" } {
+set result [pg_exec $lda "exec neword($no_w_id,$w_id_input,$no_d_id,$no_c_id,$ol_cnt,0,TO_TIMESTAMP($date,'YYYYMMDDHH24MISS'))" ]
+} else {
+if { $pg_storedprocs eq "true" } {
+set result [pg_exec $lda "call neword($no_w_id,$w_id_input,$no_d_id,$no_c_id,$ol_cnt,0.0,'','',0.0,0.0,0,TO_TIMESTAMP('$date','YYYYMMDDHH24MISS')::timestamp without time zone)" ]
+        } else {
+set result [pg_exec $lda "select neword($no_w_id,$w_id_input,$no_d_id,$no_c_id,$ol_cnt,0)" ]
+        }
+}
+if {[pg_result $result -status] != "PGRES_TUPLES_OK"} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "New Order Procedure Error set RAISEERROR for Details"
+		}
+pg_result $result -clear
+	} else {
+pg_result $result -clear
+	}
+}
+#PAYMENT
+proc payment { lda p_w_id w_id_input RAISEERROR ora_compatible pg_storedprocs } {
+#2.5.1.1 The home warehouse id remains the same for each terminal
+#2.5.1.1 select district id randomly from home warehouse where d_w_id = d_id
+set p_d_id [ RandomNumber 1 10 ]
+#2.5.1.2 customer selected 60% of time by name and 40% of time by number
+set x [ RandomNumber 1 100 ]
+set y [ RandomNumber 1 100 ]
+if { $x <= 85 } {
+set p_c_d_id $p_d_id
+set p_c_w_id $p_w_id
+} else {
+#use a remote warehouse
+set p_c_d_id [ RandomNumber 1 10 ]
+set p_c_w_id [ RandomNumber 1 $w_id_input ]
+while { ($p_c_w_id == $p_w_id) && ($w_id_input != 1) } {
+set p_c_w_id [ RandomNumber 1  $w_id_input ]
+	}
+}
+set nrnd [ NURand 255 0 999 123 ]
+set name [ randname $nrnd ]
+set p_c_id [ RandomNumber 1 3000 ]
+if { $y <= 60 } {
+#use customer name
+#C_LAST is generated
+set byname 1
+ } else {
+#use customer number
+set byname 0
+set name {}
+ }
+#2.5.1.3 random amount from 1 to 5000
+set p_h_amount [ RandomNumber 1 5000 ]
+#2.5.1.4 date selected from SUT
+set h_date [ gettimestamp ]
+#2.5.2.1 Payment Transaction
+#change following to correct values
+if { $ora_compatible eq "true" } {
+set result [pg_exec $lda "exec payment($p_w_id,$p_d_id,$p_c_w_id,$p_c_d_id,$p_c_id,$byname,$p_h_amount,'$name','0',0,TO_TIMESTAMP($h_date,'YYYYMMDDHH24MISS'))" ]
+} else {
+if { $pg_storedprocs eq "true" } {
+set result [pg_exec $lda "call payment($p_w_id,$p_d_id,$p_c_w_id,$p_c_d_id,$byname,$p_h_amount,'0','$name',$p_c_id,'','','','','','','','','','','','','','','','','','',TO_TIMESTAMP('$h_date','YYYYMMDDHH24MISS')::timestamp without time zone,0.0,0.0,0.0,'',TO_TIMESTAMP('$h_date','YYYYMMDDHH24MISS')::timestamp without time zone)" ]
+        } else {
+set result [pg_exec $lda "select payment($p_w_id,$p_d_id,$p_c_w_id,$p_c_d_id,$p_c_id,$byname,$p_h_amount,'$name','0',0)" ]
+        }
+}
+if {[pg_result $result -status] != "PGRES_TUPLES_OK"} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Payment Procedure Error set RAISEERROR for Details"
+		}
+pg_result $result -clear
+	} else {
+pg_result $result -clear
+	}
+}
+#ORDER_STATUS
+proc ostat { lda w_id RAISEERROR ora_compatible pg_storedprocs } {
+#2.5.1.1 select district id randomly from home warehouse where d_w_id = d_id
+set d_id [ RandomNumber 1 10 ]
+set nrnd [ NURand 255 0 999 123 ]
+set name [ randname $nrnd ]
+set c_id [ RandomNumber 1 3000 ]
+set y [ RandomNumber 1 100 ]
+if { $y <= 60 } {
+set byname 1
+ } else {
+set byname 0
+set name {}
+}
+if { $ora_compatible eq "true" } {
+set result [pg_exec $lda "exec ostat($w_id,$d_id,$c_id,$byname,'$name')" ]
+} else {
+if { $pg_storedprocs eq "true" } {
+set date [ gettimestamp ]
+set result [pg_exec $lda "call ostat($w_id,$d_id,$c_id,$byname,'$name','','',0.0,0,TO_TIMESTAMP('$date','YYYYMMDDHH24MISS')::timestamp without time zone,0,'')" ]
+        } else {
+set result [pg_exec $lda "select * from ostat($w_id,$d_id,$c_id,$byname,'$name') as (ol_i_id INTEGER,  ol_supply_w_id INTEGER, ol_quantity SMALLINT, ol_amount NUMERIC, ol_delivery_d TIMESTAMPTZ,  out_os_c_id INTEGER, out_os_c_last VARCHAR, os_c_first VARCHAR, os_c_middle VARCHAR, os_c_balance NUMERIC, os_o_id INTEGER, os_entdate TIMESTAMPtz, os_o_carrier_id SMALLINT)" ]
+        }
+}
+if {[pg_result $result -status] != "PGRES_TUPLES_OK"} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Order Status Procedure Error set RAISEERROR for Details"
+		}
+pg_result $result -clear
+	} else {
+pg_result $result -clear
+	}
+}
+#DELIVERY
+proc delivery { lda w_id RAISEERROR ora_compatible pg_storedprocs } {
+set carrier_id [ RandomNumber 1 10 ]
+set date [ gettimestamp ]
+if { $ora_compatible eq "true" } {
+set result [pg_exec $lda "exec delivery($w_id,$carrier_id,TO_TIMESTAMP($date,'YYYYMMDDHH24MISS'))" ]
+} else {
+if { $pg_storedprocs eq "true" } {
+set result [pg_exec $lda "call delivery($w_id,$carrier_id,TO_TIMESTAMP('$date','YYYYMMDDHH24MISS')::timestamp without time zone)" ]
+        } else {
+set result [pg_exec $lda "select delivery($w_id,$carrier_id)" ]
+        }
+}
+if {[pg_result $result -status] ni {"PGRES_TUPLES_OK" "PGRES_COMMAND_OK"}} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Delivery Procedure Error set RAISEERROR for Details"
+		}
+pg_result $result -clear
+	} else {
+pg_result $result -clear
+	}
+}
+#STOCK LEVEL
+proc slev { lda w_id stock_level_d_id RAISEERROR ora_compatible pg_storedprocs } {
+set threshold [ RandomNumber 10 20 ]
+if { $ora_compatible eq "true" } {
+set result [pg_exec $lda "exec slev($w_id,$stock_level_d_id,$threshold)" ]
+} else {
+if { $pg_storedprocs eq "true" } {
+set result [pg_exec $lda "call slev($w_id,$stock_level_d_id,$threshold,0)"]
+        } else {
+set result [pg_exec $lda "select slev($w_id,$stock_level_d_id,$threshold)" ]
+        }
+}
+if {[pg_result $result -status] ni {"PGRES_TUPLES_OK" "PGRES_COMMAND_OK"}} {
+if { $RAISEERROR } {
+error "[pg_result $result -error]"
+		} else {
+puts "Stock Level Procedure Error set RAISEERROR for Details"
+		}
+pg_result $result -clear
+	} else {
+pg_result $result -clear
+	}
+}
+#RUN TPC-C
+set lda [ ConnectToPostgres $host $port $user $password $db ]
+if { $lda eq "Failed" } {
+error "error, the database connection to $host could not be established"
+ } else {
+if { $ora_compatible eq "true" } {
+set result [ pg_exec $lda "exec dbms_output.disable" ]
+pg_result $result -clear
+	}
+ }
+pg_select $lda "select max(w_id) from warehouse" w_id_input_arr {
+set w_id_input $w_id_input_arr(max)
+	}
+#2.4.1.1 set warehouse_id stays constant for a given terminal
+set w_id  [ RandomNumber 1 $w_id_input ]  
+pg_select $lda "select max(d_id) from district" d_id_input_arr {
+set d_id_input $d_id_input_arr(max)
+}
+set stock_level_d_id  [ RandomNumber 1 $d_id_input ]  
+puts "Processing $total_iterations transactions with output suppressed..."
+set abchk 1; set abchk_mx 1024; set hi_t [ expr {pow([ lindex [ time {if {  [ tsv::get application abort ]  } { break }} ] 0 ],2)}]
+for {set it 0} {$it < $total_iterations} {incr it} {
+if { [expr {$it % $abchk}] eq 0 } { if { [ time {if {  [ tsv::get application abort ]  } { break }} ] > $hi_t }  {  set  abchk [ expr {min(($abchk * 2), $abchk_mx)}]; set hi_t [ expr {$hi_t * 2} ] } }
+set choice [ RandomNumber 1 23 ]
+if {$choice <= 10} {
+if { $KEYANDTHINK } { keytime 18 }
+neword $lda $w_id $w_id_input $RAISEERROR $ora_compatible $pg_storedprocs
+if { $KEYANDTHINK } { thinktime 12 }
+} elseif {$choice <= 20} {
+if { $KEYANDTHINK } { keytime 3 }
+payment $lda $w_id $w_id_input $RAISEERROR $ora_compatible $pg_storedprocs
+if { $KEYANDTHINK } { thinktime 12 }
+} elseif {$choice <= 21} {
+if { $KEYANDTHINK } { keytime 2 }
+delivery $lda $w_id $RAISEERROR $ora_compatible $pg_storedprocs
+if { $KEYANDTHINK } { thinktime 10 }
+} elseif {$choice <= 22} {
+if { $KEYANDTHINK } { keytime 2 }
+slev $lda $w_id $stock_level_d_id $RAISEERROR $ora_compatible $pg_storedprocs
+if { $KEYANDTHINK } { thinktime 5 }
+} elseif {$choice <= 23} {
+if { $KEYANDTHINK } { keytime 2 }
+ostat $lda $w_id $RAISEERROR $ora_compatible $pg_storedprocs
+if { $KEYANDTHINK } { thinktime 5 }
+	}
+}
+if {$timeprofile eq "true" && $myposition eq 2} {::etprof::printLiveInfo}
+pg_disconnect $lda
+		}
+      }
+Vuser 1 created MONITOR - WAIT IDLE
+Vuser 2 created - WAIT IDLE
+Vuser 3 created - WAIT IDLE
+Vuser 4 created - WAIT IDLE
+Vuser 5 created - WAIT IDLE
+Vuser 6 created - WAIT IDLE
+Vuser 7 created - WAIT IDLE
+Vuser 8 created - WAIT IDLE
+Vuser 9 created - WAIT IDLE
+Vuser 10 created - WAIT IDLE
+Vuser 11 created - WAIT IDLE
+Vuser 12 created - WAIT IDLE
+Vuser 13 created - WAIT IDLE
+Vuser 14 created - WAIT IDLE
+Vuser 15 created - WAIT IDLE
+Vuser 16 created - WAIT IDLE
+Vuser 17 created - WAIT IDLE
+Vuser 18 created - WAIT IDLE
+Vuser 19 created - WAIT IDLE
+Vuser 20 created - WAIT IDLE
+Vuser 21 created - WAIT IDLE
+Vuser 22 created - WAIT IDLE
+Vuser 23 created - WAIT IDLE
+Vuser 24 created - WAIT IDLE
+Vuser 25 created - WAIT IDLE
+Vuser 26 created - WAIT IDLE
+Vuser 27 created - WAIT IDLE
+Vuser 28 created - WAIT IDLE
+Vuser 29 created - WAIT IDLE
+Vuser 30 created - WAIT IDLE
+Vuser 31 created - WAIT IDLE
+Vuser 32 created - WAIT IDLE
+Vuser 33 created - WAIT IDLE
+Vuser 34 created - WAIT IDLE
+Vuser 35 created - WAIT IDLE
+Vuser 36 created - WAIT IDLE
+Vuser 37 created - WAIT IDLE
+Vuser 38 created - WAIT IDLE
+Vuser 39 created - WAIT IDLE
+Vuser 40 created - WAIT IDLE
+Vuser 41 created - WAIT IDLE
+Vuser 42 created - WAIT IDLE
+Vuser 43 created - WAIT IDLE
+Vuser 44 created - WAIT IDLE
+Vuser 45 created - WAIT IDLE
+Vuser 46 created - WAIT IDLE
+Vuser 47 created - WAIT IDLE
+Vuser 48 created - WAIT IDLE
+Vuser 49 created - WAIT IDLE
+Vuser 50 created - WAIT IDLE
+Vuser 51 created - WAIT IDLE
+Vuser 52 created - WAIT IDLE
+Vuser 53 created - WAIT IDLE
+Vuser 54 created - WAIT IDLE
+Vuser 55 created - WAIT IDLE
+Vuser 56 created - WAIT IDLE
+Vuser 57 created - WAIT IDLE
+Vuser 58 created - WAIT IDLE
+Vuser 59 created - WAIT IDLE
+Vuser 60 created - WAIT IDLE
+Vuser 61 created - WAIT IDLE
+Vuser 62 created - WAIT IDLE
+Vuser 63 created - WAIT IDLE
+Vuser 64 created - WAIT IDLE
+Vuser 65 created - WAIT IDLE
+Vuser 66 created - WAIT IDLE
+Vuser 67 created - WAIT IDLE
+Vuser 68 created - WAIT IDLE
+Vuser 69 created - WAIT IDLE
+Vuser 70 created - WAIT IDLE
+Vuser 71 created - WAIT IDLE
+Vuser 72 created - WAIT IDLE
+Vuser 73 created - WAIT IDLE
+Vuser 74 created - WAIT IDLE
+Vuser 75 created - WAIT IDLE
+Vuser 76 created - WAIT IDLE
+Vuser 77 created - WAIT IDLE
+Vuser 78 created - WAIT IDLE
+Vuser 79 created - WAIT IDLE
+Vuser 80 created - WAIT IDLE
+Vuser 81 created - WAIT IDLE
+Vuser 82 created - WAIT IDLE
+Vuser 83 created - WAIT IDLE
+Vuser 84 created - WAIT IDLE
+Vuser 85 created - WAIT IDLE
+Vuser 86 created - WAIT IDLE
+Vuser 87 created - WAIT IDLE
+Vuser 88 created - WAIT IDLE
+Vuser 89 created - WAIT IDLE
+Vuser 90 created - WAIT IDLE
+Vuser 91 created - WAIT IDLE
+Vuser 92 created - WAIT IDLE
+Vuser 93 created - WAIT IDLE
+Vuser 94 created - WAIT IDLE
+Vuser 95 created - WAIT IDLE
+Vuser 96 created - WAIT IDLE
+Vuser 97 created - WAIT IDLE
+Vuser 98 created - WAIT IDLE
+Vuser 99 created - WAIT IDLE
+Vuser 100 created - WAIT IDLE
+Vuser 101 created - WAIT IDLE
+Vuser 102 created - WAIT IDLE
+Vuser 103 created - WAIT IDLE
+Vuser 104 created - WAIT IDLE
+Vuser 105 created - WAIT IDLE
+Vuser 106 created - WAIT IDLE
+Vuser 107 created - WAIT IDLE
+Vuser 108 created - WAIT IDLE
+Vuser 109 created - WAIT IDLE
+Vuser 110 created - WAIT IDLE
+Vuser 111 created - WAIT IDLE
+Vuser 112 created - WAIT IDLE
+Vuser 113 created - WAIT IDLE
+Vuser 114 created - WAIT IDLE
+Vuser 115 created - WAIT IDLE
+Vuser 116 created - WAIT IDLE
+Vuser 117 created - WAIT IDLE
+Vuser 118 created - WAIT IDLE
+Vuser 119 created - WAIT IDLE
+Vuser 120 created - WAIT IDLE
+Vuser 121 created - WAIT IDLE
+Vuser 122 created - WAIT IDLE
+Vuser 123 created - WAIT IDLE
+Vuser 124 created - WAIT IDLE
+Vuser 125 created - WAIT IDLE
+Vuser 126 created - WAIT IDLE
+Vuser 127 created - WAIT IDLE
+Vuser 128 created - WAIT IDLE
+Vuser 129 created - WAIT IDLE
+Vuser 130 created - WAIT IDLE
+Vuser 131 created - WAIT IDLE
+Vuser 132 created - WAIT IDLE
+Vuser 133 created - WAIT IDLE
+Vuser 134 created - WAIT IDLE
+Vuser 135 created - WAIT IDLE
+Vuser 136 created - WAIT IDLE
+Vuser 137 created - WAIT IDLE
+Vuser 138 created - WAIT IDLE
+Vuser 139 created - WAIT IDLE
+Vuser 140 created - WAIT IDLE
+Vuser 141 created - WAIT IDLE
+Vuser 142 created - WAIT IDLE
+Vuser 143 created - WAIT IDLE
+Vuser 144 created - WAIT IDLE
+Vuser 145 created - WAIT IDLE
+Vuser 146 created - WAIT IDLE
+Vuser 147 created - WAIT IDLE
+Vuser 148 created - WAIT IDLE
+Vuser 149 created - WAIT IDLE
+Vuser 150 created - WAIT IDLE
+Vuser 151 created - WAIT IDLE
+Vuser 152 created - WAIT IDLE
+Vuser 153 created - WAIT IDLE
+Vuser 154 created - WAIT IDLE
+Vuser 155 created - WAIT IDLE
+Vuser 156 created - WAIT IDLE
+Vuser 157 created - WAIT IDLE
+Vuser 158 created - WAIT IDLE
+Vuser 159 created - WAIT IDLE
+Vuser 160 created - WAIT IDLE
+Vuser 161 created - WAIT IDLE
+Vuser 162 created - WAIT IDLE
+Vuser 163 created - WAIT IDLE
+Vuser 164 created - WAIT IDLE
+Vuser 165 created - WAIT IDLE
+Vuser 166 created - WAIT IDLE
+Vuser 167 created - WAIT IDLE
+Vuser 168 created - WAIT IDLE
+Vuser 169 created - WAIT IDLE
+Vuser 170 created - WAIT IDLE
+Vuser 171 created - WAIT IDLE
+Vuser 172 created - WAIT IDLE
+Vuser 173 created - WAIT IDLE
+Vuser 174 created - WAIT IDLE
+Vuser 175 created - WAIT IDLE
+Vuser 176 created - WAIT IDLE
+Vuser 177 created - WAIT IDLE
+Vuser 178 created - WAIT IDLE
+Vuser 179 created - WAIT IDLE
+Vuser 180 created - WAIT IDLE
+Vuser 181 created - WAIT IDLE
+Vuser 182 created - WAIT IDLE
+Vuser 183 created - WAIT IDLE
+Vuser 184 created - WAIT IDLE
+Vuser 185 created - WAIT IDLE
+Vuser 186 created - WAIT IDLE
+Vuser 187 created - WAIT IDLE
+Vuser 188 created - WAIT IDLE
+Vuser 189 created - WAIT IDLE
+Vuser 190 created - WAIT IDLE
+Vuser 191 created - WAIT IDLE
+Vuser 192 created - WAIT IDLE
+Vuser 193 created - WAIT IDLE
+Vuser 194 created - WAIT IDLE
+Vuser 195 created - WAIT IDLE
+Vuser 196 created - WAIT IDLE
+Vuser 197 created - WAIT IDLE
+Vuser 198 created - WAIT IDLE
+Vuser 199 created - WAIT IDLE
+Vuser 200 created - WAIT IDLE
+Vuser 201 created - WAIT IDLE
+Vuser 202 created - WAIT IDLE
+Vuser 203 created - WAIT IDLE
+Vuser 204 created - WAIT IDLE
+Vuser 205 created - WAIT IDLE
+Vuser 206 created - WAIT IDLE
+Vuser 207 created - WAIT IDLE
+Vuser 208 created - WAIT IDLE
+Vuser 209 created - WAIT IDLE
+Vuser 210 created - WAIT IDLE
+Vuser 211 created - WAIT IDLE
+Vuser 212 created - WAIT IDLE
+Vuser 213 created - WAIT IDLE
+Vuser 214 created - WAIT IDLE
+Vuser 215 created - WAIT IDLE
+Vuser 216 created - WAIT IDLE
+Vuser 217 created - WAIT IDLE
+Vuser 218 created - WAIT IDLE
+Vuser 219 created - WAIT IDLE
+Vuser 220 created - WAIT IDLE
+Vuser 221 created - WAIT IDLE
+Vuser 222 created - WAIT IDLE
+Vuser 223 created - WAIT IDLE
+Vuser 224 created - WAIT IDLE
+Vuser 225 created - WAIT IDLE
+Vuser 226 created - WAIT IDLE
+Vuser 227 created - WAIT IDLE
+Vuser 228 created - WAIT IDLE
+Vuser 229 created - WAIT IDLE
+Vuser 230 created - WAIT IDLE
+Vuser 231 created - WAIT IDLE
+Vuser 232 created - WAIT IDLE
+Vuser 233 created - WAIT IDLE
+Vuser 234 created - WAIT IDLE
+Vuser 235 created - WAIT IDLE
+Vuser 236 created - WAIT IDLE
+Vuser 237 created - WAIT IDLE
+Vuser 238 created - WAIT IDLE
+Vuser 239 created - WAIT IDLE
+Vuser 240 created - WAIT IDLE
+Vuser 241 created - WAIT IDLE
+Vuser 242 created - WAIT IDLE
+Vuser 243 created - WAIT IDLE
+Vuser 244 created - WAIT IDLE
+Vuser 245 created - WAIT IDLE
+Vuser 246 created - WAIT IDLE
+Vuser 247 created - WAIT IDLE
+Vuser 248 created - WAIT IDLE
+Vuser 249 created - WAIT IDLE
+Vuser 250 created - WAIT IDLE
+Vuser 251 created - WAIT IDLE
+Vuser 252 created - WAIT IDLE
+Vuser 253 created - WAIT IDLE
+Vuser 254 created - WAIT IDLE
+Vuser 255 created - WAIT IDLE
+Vuser 256 created - WAIT IDLE
+Vuser 257 created - WAIT IDLE
+Vuser 258 created - WAIT IDLE
+Vuser 259 created - WAIT IDLE
+Vuser 260 created - WAIT IDLE
+Vuser 261 created - WAIT IDLE
+Vuser 262 created - WAIT IDLE
+Vuser 263 created - WAIT IDLE
+Vuser 264 created - WAIT IDLE
+Vuser 265 created - WAIT IDLE
+Vuser 266 created - WAIT IDLE
+Vuser 267 created - WAIT IDLE
+Vuser 268 created - WAIT IDLE
+Vuser 269 created - WAIT IDLE
+Vuser 270 created - WAIT IDLE
+Vuser 271 created - WAIT IDLE
+Vuser 272 created - WAIT IDLE
+Vuser 273 created - WAIT IDLE
+Vuser 274 created - WAIT IDLE
+Vuser 275 created - WAIT IDLE
+Vuser 276 created - WAIT IDLE
+Vuser 277 created - WAIT IDLE
+Vuser 278 created - WAIT IDLE
+Vuser 279 created - WAIT IDLE
+Vuser 280 created - WAIT IDLE
+Vuser 281 created - WAIT IDLE
+Vuser 282 created - WAIT IDLE
+Vuser 283 created - WAIT IDLE
+Vuser 284 created - WAIT IDLE
+Vuser 285 created - WAIT IDLE
+Vuser 286 created - WAIT IDLE
+Vuser 287 created - WAIT IDLE
+Vuser 288 created - WAIT IDLE
+Vuser 289 created - WAIT IDLE
+Vuser 290 created - WAIT IDLE
+Vuser 291 created - WAIT IDLE
+Vuser 292 created - WAIT IDLE
+Vuser 293 created - WAIT IDLE
+Vuser 294 created - WAIT IDLE
+Vuser 295 created - WAIT IDLE
+Vuser 296 created - WAIT IDLE
+Vuser 297 created - WAIT IDLE
+Vuser 298 created - WAIT IDLE
+Vuser 299 created - WAIT IDLE
+Vuser 300 created - WAIT IDLE
+Vuser 301 created - WAIT IDLE
+Vuser 302 created - WAIT IDLE
+Vuser 303 created - WAIT IDLE
+Vuser 304 created - WAIT IDLE
+Vuser 305 created - WAIT IDLE
+Vuser 306 created - WAIT IDLE
+Vuser 307 created - WAIT IDLE
+Vuser 308 created - WAIT IDLE
+Vuser 309 created - WAIT IDLE
+Vuser 310 created - WAIT IDLE
+Vuser 311 created - WAIT IDLE
+Vuser 312 created - WAIT IDLE
+Vuser 313 created - WAIT IDLE
+Vuser 314 created - WAIT IDLE
+Vuser 315 created - WAIT IDLE
+Vuser 316 created - WAIT IDLE
+Vuser 317 created - WAIT IDLE
+Vuser 318 created - WAIT IDLE
+Vuser 319 created - WAIT IDLE
+Vuser 320 created - WAIT IDLE
+Vuser 321 created - WAIT IDLE
+Vuser 322 created - WAIT IDLE
+Vuser 323 created - WAIT IDLE
+Vuser 324 created - WAIT IDLE
+Vuser 325 created - WAIT IDLE
+Vuser 326 created - WAIT IDLE
+Vuser 327 created - WAIT IDLE
+Vuser 328 created - WAIT IDLE
+Vuser 329 created - WAIT IDLE
+Vuser 330 created - WAIT IDLE
+Vuser 331 created - WAIT IDLE
+Vuser 332 created - WAIT IDLE
+Vuser 333 created - WAIT IDLE
+Vuser 334 created - WAIT IDLE
+Vuser 335 created - WAIT IDLE
+Vuser 336 created - WAIT IDLE
+Vuser 337 created - WAIT IDLE
+Vuser 338 created - WAIT IDLE
+Vuser 339 created - WAIT IDLE
+Vuser 340 created - WAIT IDLE
+Vuser 341 created - WAIT IDLE
+Vuser 342 created - WAIT IDLE
+Vuser 343 created - WAIT IDLE
+Vuser 344 created - WAIT IDLE
+Vuser 345 created - WAIT IDLE
+Vuser 346 created - WAIT IDLE
+Vuser 347 created - WAIT IDLE
+Vuser 348 created - WAIT IDLE
+Vuser 349 created - WAIT IDLE
+Vuser 350 created - WAIT IDLE
+Vuser 351 created - WAIT IDLE
+Vuser 352 created - WAIT IDLE
+Vuser 353 created - WAIT IDLE
+Vuser 354 created - WAIT IDLE
+Vuser 355 created - WAIT IDLE
+Vuser 356 created - WAIT IDLE
+Vuser 357 created - WAIT IDLE
+Vuser 358 created - WAIT IDLE
+Vuser 359 created - WAIT IDLE
+Vuser 360 created - WAIT IDLE
+Vuser 361 created - WAIT IDLE
+Vuser 362 created - WAIT IDLE
+Vuser 363 created - WAIT IDLE
+Vuser 364 created - WAIT IDLE
+Vuser 365 created - WAIT IDLE
+Vuser 366 created - WAIT IDLE
+Vuser 367 created - WAIT IDLE
+Vuser 368 created - WAIT IDLE
+Vuser 369 created - WAIT IDLE
+Vuser 370 created - WAIT IDLE
+Vuser 371 created - WAIT IDLE
+Vuser 372 created - WAIT IDLE
+Vuser 373 created - WAIT IDLE
+Vuser 374 created - WAIT IDLE
+Vuser 375 created - WAIT IDLE
+Vuser 376 created - WAIT IDLE
+Vuser 377 created - WAIT IDLE
+Vuser 378 created - WAIT IDLE
+Vuser 379 created - WAIT IDLE
+Vuser 380 created - WAIT IDLE
+Vuser 381 created - WAIT IDLE
+Vuser 382 created - WAIT IDLE
+Vuser 383 created - WAIT IDLE
+Vuser 384 created - WAIT IDLE
+Vuser 385 created - WAIT IDLE
+Vuser 386 created - WAIT IDLE
+Vuser 387 created - WAIT IDLE
+Vuser 388 created - WAIT IDLE
+Vuser 389 created - WAIT IDLE
+Vuser 390 created - WAIT IDLE
+Vuser 391 created - WAIT IDLE
+Vuser 392 created - WAIT IDLE
+Vuser 393 created - WAIT IDLE
+Vuser 394 created - WAIT IDLE
+Vuser 395 created - WAIT IDLE
+Vuser 396 created - WAIT IDLE
+Vuser 397 created - WAIT IDLE
+Vuser 398 created - WAIT IDLE
+Vuser 399 created - WAIT IDLE
+Vuser 400 created - WAIT IDLE
+Vuser 401 created - WAIT IDLE
+Vuser 402 created - WAIT IDLE
+Vuser 403 created - WAIT IDLE
+Vuser 404 created - WAIT IDLE
+Vuser 405 created - WAIT IDLE
+Vuser 406 created - WAIT IDLE
+Vuser 407 created - WAIT IDLE
+Vuser 408 created - WAIT IDLE
+Vuser 409 created - WAIT IDLE
+Vuser 410 created - WAIT IDLE
+Vuser 411 created - WAIT IDLE
+Vuser 412 created - WAIT IDLE
+Vuser 413 created - WAIT IDLE
+Vuser 414 created - WAIT IDLE
+Vuser 415 created - WAIT IDLE
+Vuser 416 created - WAIT IDLE
+Vuser 417 created - WAIT IDLE
+Vuser 418 created - WAIT IDLE
+Vuser 419 created - WAIT IDLE
+Vuser 420 created - WAIT IDLE
+Vuser 421 created - WAIT IDLE
+Vuser 422 created - WAIT IDLE
+Vuser 423 created - WAIT IDLE
+Vuser 424 created - WAIT IDLE
+Vuser 425 created - WAIT IDLE
+Vuser 426 created - WAIT IDLE
+Vuser 427 created - WAIT IDLE
+Vuser 428 created - WAIT IDLE
+Vuser 429 created - WAIT IDLE
+Vuser 430 created - WAIT IDLE
+Vuser 431 created - WAIT IDLE
+Vuser 432 created - WAIT IDLE
+Vuser 433 created - WAIT IDLE
+Vuser 434 created - WAIT IDLE
+Vuser 435 created - WAIT IDLE
+Vuser 436 created - WAIT IDLE
+Vuser 437 created - WAIT IDLE
+Vuser 438 created - WAIT IDLE
+Vuser 439 created - WAIT IDLE
+Vuser 440 created - WAIT IDLE
+Vuser 441 created - WAIT IDLE
+Vuser 442 created - WAIT IDLE
+Vuser 443 created - WAIT IDLE
+Vuser 444 created - WAIT IDLE
+Vuser 445 created - WAIT IDLE
+Vuser 446 created - WAIT IDLE
+Vuser 447 created - WAIT IDLE
+Vuser 448 created - WAIT IDLE
+Vuser 449 created - WAIT IDLE
+Vuser 450 created - WAIT IDLE
+Vuser 451 created - WAIT IDLE
+Vuser 452 created - WAIT IDLE
+Vuser 453 created - WAIT IDLE
+Vuser 454 created - WAIT IDLE
+Vuser 455 created - WAIT IDLE
+Vuser 456 created - WAIT IDLE
+Vuser 457 created - WAIT IDLE
+Vuser 458 created - WAIT IDLE
+Vuser 459 created - WAIT IDLE
+Vuser 460 created - WAIT IDLE
+Vuser 461 created - WAIT IDLE
+Vuser 462 created - WAIT IDLE
+Vuser 463 created - WAIT IDLE
+Vuser 464 created - WAIT IDLE
+Vuser 465 created - WAIT IDLE
+Vuser 466 created - WAIT IDLE
+Vuser 467 created - WAIT IDLE
+Vuser 468 created - WAIT IDLE
+Vuser 469 created - WAIT IDLE
+Vuser 470 created - WAIT IDLE
+Vuser 471 created - WAIT IDLE
+Vuser 472 created - WAIT IDLE
+Vuser 473 created - WAIT IDLE
+Vuser 474 created - WAIT IDLE
+Vuser 475 created - WAIT IDLE
+Vuser 476 created - WAIT IDLE
+Vuser 477 created - WAIT IDLE
+Vuser 478 created - WAIT IDLE
+Vuser 479 created - WAIT IDLE
+Vuser 480 created - WAIT IDLE
+Vuser 481 created - WAIT IDLE
+Vuser 482 created - WAIT IDLE
+Vuser 483 created - WAIT IDLE
+Vuser 484 created - WAIT IDLE
+Vuser 485 created - WAIT IDLE
+Vuser 486 created - WAIT IDLE
+Vuser 487 created - WAIT IDLE
+Vuser 488 created - WAIT IDLE
+Vuser 489 created - WAIT IDLE
+Vuser 490 created - WAIT IDLE
+Vuser 491 created - WAIT IDLE
+Vuser 492 created - WAIT IDLE
+Vuser 493 created - WAIT IDLE
+Vuser 494 created - WAIT IDLE
+Vuser 495 created - WAIT IDLE
+Vuser 496 created - WAIT IDLE
+Vuser 497 created - WAIT IDLE
+Vuser 498 created - WAIT IDLE
+Vuser 499 created - WAIT IDLE
+Vuser 500 created - WAIT IDLE
+Vuser 501 created - WAIT IDLE
+Logging activated
+to /tmp/hammerdb.log
+501 Virtual Users Created with Monitor VU
+RUNNING - PostgreSQL TPC-C Timed
+Vuser 1:RUNNING
+[10CVuser 1:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 1: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 1:FINISHED FAILED
+[10CVuser 2:RUNNING
+[10CVuser 2:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 2: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 2:FINISHED FAILED
+[10CVuser 3:RUNNING
+[10CVuser 3:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 3: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 3:FINISHED FAILED
+[10CVuser 4:RUNNING
+[10CVuser 4:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 4: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 4:FINISHED FAILED
+[10CVuser 5:RUNNING
+[10CVuser 5:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 5: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 5:FINISHED FAILED
+[10CVuser 6:RUNNING
+[10CVuser 6:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 6: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 6:FINISHED FAILED
+[10CVuser 7:RUNNING
+[10CVuser 7:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 7: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 7:FINISHED FAILED
+[10CVuser 8:RUNNING
+[10CVuser 8:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 8: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 8:FINISHED FAILED
+[10CVuser 9:RUNNING
+[10CVuser 9:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 9: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 9:FINISHED FAILED
+[10CVuser 10:RUNNING
+[10CVuser 10:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 10: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 10:FINISHED FAILED
+[10CVuser 11:RUNNING
+[10CVuser 11:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 11: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 11:FINISHED FAILED
+[10CVuser 12:RUNNING
+[10CVuser 12:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 12: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 12:FINISHED FAILED
+[10CVuser 13:RUNNING
+[10CVuser 13:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 13: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 13:FINISHED FAILED
+[10CVuser 14:RUNNING
+[10CVuser 14:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 14: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 14:FINISHED FAILED
+[10CVuser 15:RUNNING
+[10CVuser 15:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 15: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 15:FINISHED FAILED
+[10CVuser 16:RUNNING
+[10CVuser 16:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 16: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 16:FINISHED FAILED
+[10CVuser 17:RUNNING
+[10CVuser 17:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 17: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 17:FINISHED FAILED
+[10CVuser 18:RUNNING
+[10CVuser 18:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 18: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 18:FINISHED FAILED
+[10CVuser 19:RUNNING
+[10CVuser 19:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 19: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 19:FINISHED FAILED
+[10CVuser 20:RUNNING
+[10CVuser 20:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 20: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 20:FINISHED FAILED
+[10CVuser 21:RUNNING
+[10CVuser 21:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 21: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 21:FINISHED FAILED
+[10CVuser 22:RUNNING
+[10CVuser 22:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 22: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 22:FINISHED FAILED
+[10CVuser 23:RUNNING
+[10CVuser 23:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 23: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 23:FINISHED FAILED
+[10CVuser 24:RUNNING
+[10CVuser 24:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 24: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 24:FINISHED FAILED
+[10CVuser 25:RUNNING
+[10CVuser 25:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 25: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 25:FINISHED FAILED
+[10CVuser 26:RUNNING
+[10CVuser 26:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 26: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 26:FINISHED FAILED
+[10CVuser 27:RUNNING
+[10CVuser 27:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 27: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 27:FINISHED FAILED
+[10CVuser 28:RUNNING
+[10CVuser 28:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 28: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 28:FINISHED FAILED
+[10CVuser 29:RUNNING
+[10CVuser 29:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 29: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 29:FINISHED FAILED
+[10CVuser 30:RUNNING
+[10CVuser 30:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 30: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 30:FINISHED FAILED
+[10CVuser 31:RUNNING
+[10CVuser 31:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 31: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 31:FINISHED FAILED
+[10CVuser 32:RUNNING
+[10CVuser 32:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 32: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 32:FINISHED FAILED
+[10CVuser 33:RUNNING
+[10CVuser 33:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 33: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 33:FINISHED FAILED
+[10CVuser 34:RUNNING
+[10CVuser 34:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 34: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 34:FINISHED FAILED
+[10CVuser 35:RUNNING
+[10CVuser 35:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 35: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 35:FINISHED FAILED
+[10CVuser 36:RUNNING
+[10CVuser 36:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 36: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 36:FINISHED FAILED
+[10CVuser 37:RUNNING
+[10CVuser 37:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 37: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 37:FINISHED FAILED
+[10CVuser 38:RUNNING
+[10CVuser 38:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 38: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 38:FINISHED FAILED
+[10CVuser 39:RUNNING
+[10CVuser 39:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 39: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 39:FINISHED FAILED
+[10CVuser 40:RUNNING
+[10CVuser 40:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 40: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 40:FINISHED FAILED
+[10CVuser 41:RUNNING
+[10CVuser 41:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 41: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 41:FINISHED FAILED
+[10CVuser 42:RUNNING
+[10CVuser 42:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 42: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 42:FINISHED FAILED
+[10CVuser 43:RUNNING
+[10CVuser 43:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 43: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 43:FINISHED FAILED
+[10CVuser 44:RUNNING
+[10CVuser 44:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 44: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 44:FINISHED FAILED
+[10CVuser 45:RUNNING
+[10CVuser 45:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 45: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 45:FINISHED FAILED
+[10CVuser 46:RUNNING
+[10CVuser 46:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 46: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 46:FINISHED FAILED
+[10CVuser 47:RUNNING
+[10CVuser 47:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 47: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 47:FINISHED FAILED
+[10CVuser 48:RUNNING
+[10CVuser 48:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 48: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 48:FINISHED FAILED
+[10CVuser 49:RUNNING
+[10CVuser 49:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 49: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 49:FINISHED FAILED
+[10CVuser 50:RUNNING
+[10CVuser 50:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 50: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 50:FINISHED FAILED
+[10CVuser 51:RUNNING
+[10CVuser 51:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 51: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 51:FINISHED FAILED
+[10CVuser 52:RUNNING
+[10CVuser 52:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 52: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 52:FINISHED FAILED
+[10CVuser 53:RUNNING
+[10CVuser 53:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 53: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 53:FINISHED FAILED
+[10CVuser 54:RUNNING
+[10CVuser 54:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 54: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 54:FINISHED FAILED
+[10CVuser 55:RUNNING
+[10CVuser 55:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 55: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 55:FINISHED FAILED
+[10CVuser 56:RUNNING
+[10CVuser 56:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 56: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 56:FINISHED FAILED
+[10CVuser 57:RUNNING
+[10CVuser 57:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 57: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 57:FINISHED FAILED
+[10CVuser 58:RUNNING
+[10CVuser 58:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 58: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 58:FINISHED FAILED
+[10CVuser 59:RUNNING
+[10CVuser 59:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 59: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 59:FINISHED FAILED
+[10CVuser 60:RUNNING
+[10CVuser 60:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 60: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 60:FINISHED FAILED
+[10CVuser 61:RUNNING
+[10CVuser 61:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 61: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 61:FINISHED FAILED
+[10CVuser 62:RUNNING
+[10CVuser 62:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 62: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 62:FINISHED FAILED
+[10CVuser 63:RUNNING
+[10CVuser 63:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 63: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 63:FINISHED FAILED
+[10CVuser 64:RUNNING
+[10CVuser 64:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 64: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 64:FINISHED FAILED
+[10CVuser 65:RUNNING
+[10CVuser 65:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 65: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 65:FINISHED FAILED
+[10CVuser 66:RUNNING
+[10CVuser 66:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 66: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 66:FINISHED FAILED
+[10CVuser 67:RUNNING
+[10CVuser 67:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 67: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 67:FINISHED FAILED
+[10CVuser 68:RUNNING
+[10CVuser 68:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 68: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 68:FINISHED FAILED
+[10CVuser 69:RUNNING
+[10CVuser 69:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 69: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 69:FINISHED FAILED
+[10CVuser 70:RUNNING
+[10CVuser 70:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 70: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 70:FINISHED FAILED
+[10CVuser 71:RUNNING
+[10CVuser 71:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 71: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 71:FINISHED FAILED
+[10CVuser 72:RUNNING
+[10CVuser 72:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 72: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 72:FINISHED FAILED
+[10CVuser 73:RUNNING
+[10CVuser 73:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 73: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 73:FINISHED FAILED
+[10CVuser 74:RUNNING
+[10CVuser 74:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 74: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 74:FINISHED FAILED
+[10CVuser 75:RUNNING
+[10CVuser 75:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 75: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 75:FINISHED FAILED
+[10CVuser 76:RUNNING
+[10CVuser 76:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 76: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 76:FINISHED FAILED
+[10CVuser 77:RUNNING
+[10CVuser 77:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 77: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 77:FINISHED FAILED
+[10CVuser 78:RUNNING
+[10CVuser 78:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 78: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 78:FINISHED FAILED
+[10CVuser 79:RUNNING
+[10CVuser 79:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 79: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 79:FINISHED FAILED
+[10CVuser 80:RUNNING
+[10CVuser 80:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 80: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 80:FINISHED FAILED
+[10CVuser 81:RUNNING
+[10CVuser 81:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 81: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 81:FINISHED FAILED
+[10CVuser 82:RUNNING
+[10CVuser 82:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 82: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 82:FINISHED FAILED
+[10CVuser 83:RUNNING
+[10CVuser 83:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 83: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 83:FINISHED FAILED
+[10CVuser 84:RUNNING
+[10CVuser 84:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 84: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 84:FINISHED FAILED
+[10CVuser 85:RUNNING
+[10CVuser 85:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 85: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 85:FINISHED FAILED
+[10CVuser 86:RUNNING
+[10CVuser 86:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 86: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 86:FINISHED FAILED
+[10CVuser 87:RUNNING
+[10CVuser 87:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 87: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 87:FINISHED FAILED
+[10CVuser 88:RUNNING
+[10CVuser 88:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 88: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 88:FINISHED FAILED
+[10CVuser 89:RUNNING
+[10CVuser 89:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 89: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 89:FINISHED FAILED
+[10CVuser 90:RUNNING
+[10CVuser 90:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 90: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 90:FINISHED FAILED
+[10CVuser 91:RUNNING
+[10CVuser 91:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 91: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 91:FINISHED FAILED
+[10CVuser 92:RUNNING
+[10CVuser 92:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 92: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 92:FINISHED FAILED
+[10CVuser 93:RUNNING
+[10CVuser 93:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 93: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 93:FINISHED FAILED
+[10CVuser 94:RUNNING
+[10CVuser 94:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 94: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 94:FINISHED FAILED
+[10CVuser 95:RUNNING
+[10CVuser 95:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 95: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 95:FINISHED FAILED
+[10CVuser 96:RUNNING
+[10CVuser 96:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 96: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 96:FINISHED FAILED
+[10CVuser 97:RUNNING
+[10CVuser 97:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 97: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 97:FINISHED FAILED
+[10CVuser 98:RUNNING
+[10CVuser 98:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 98: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 98:FINISHED FAILED
+[10CVuser 99:RUNNING
+[10CVuser 99:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 99: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 99:FINISHED FAILED
+[10CVuser 100:RUNNING
+[10CVuser 100:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 100: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 100:FINISHED FAILED
+[10CVuser 101:RUNNING
+[10CVuser 101:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 101: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 101:FINISHED FAILED
+[10CVuser 102:RUNNING
+[10CVuser 102:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 102: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 102:FINISHED FAILED
+[10CVuser 103:RUNNING
+[10CVuser 103:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 103: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 103:FINISHED FAILED
+[10CVuser 104:RUNNING
+[10CVuser 104:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 104: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 104:FINISHED FAILED
+[10CVuser 105:RUNNING
+[10CVuser 105:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 105: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 105:FINISHED FAILED
+[10CVuser 106:RUNNING
+[10CVuser 106:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 106: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 106:FINISHED FAILED
+[10CVuser 107:RUNNING
+[10CVuser 107:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 107: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 107:FINISHED FAILED
+[10CVuser 108:RUNNING
+[10CVuser 108:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 108: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 108:FINISHED FAILED
+[10CVuser 109:RUNNING
+[10CVuser 109:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 109: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 109:FINISHED FAILED
+[10CVuser 110:RUNNING
+[10CVuser 110:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 110: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 110:FINISHED FAILED
+[10CVuser 111:RUNNING
+[10CVuser 111:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 111: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 111:FINISHED FAILED
+[10CVuser 112:RUNNING
+[10CVuser 112:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 112: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 112:FINISHED FAILED
+[10CVuser 113:RUNNING
+[10CVuser 113:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 113: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 113:FINISHED FAILED
+[10CVuser 114:RUNNING
+[10CVuser 114:Connection to database failed could not connect to server: Connection refused Is the server running on host 172.31.40.242 and accepting TCP/IP connections on port 5432?
+[10CError in Virtual User 114: Connection to database failed
+could not connect to server: Connection refused
+	Is the server running on host "172.31.40.242" and accepting
+	TCP/IP connections on port 5432?
+
+[10CVuser 114:FINISHED FAILED

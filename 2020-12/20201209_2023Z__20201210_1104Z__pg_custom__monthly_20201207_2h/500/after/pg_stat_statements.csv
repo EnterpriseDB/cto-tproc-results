@@ -1,0 +1,449 @@
+userid,dbid,queryid,query,plans,total_plan_time,min_plan_time,max_plan_time,mean_plan_time,stddev_plan_time,calls,total_exec_time,min_exec_time,max_exec_time,mean_exec_time,stddev_exec_time,rows,shared_blks_hit,shared_blks_read,shared_blks_dirtied,shared_blks_written,local_blks_hit,local_blks_read,local_blks_dirtied,local_blks_written,temp_blks_read,temp_blks_written,blk_read_time,blk_write_time,wal_records,wal_fpi,wal_bytes
+10,16385,-6766677562622511123,COPY (SELECT * FROM pg_stat_statements) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,1.05905,1.05905,1.05905,1.05905,0,29,87,0,0,0,0,0,0,0,0,0,0,0,1,0,100
+10,16385,-5792852134034941533,ALTER EXTENSION pg_stat_statements DROP FUNCTION pg_stat_statements(boolean),0,0,0,0,0,0,1,0.028985,0.028985,0.028985,0.028985,0,0,13,0,0,0,0,0,0,0,0,0,0,0,1,0,54
+10,16385,-933829925700954516,COPY (SELECT * FROM pg_settings) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,1.088571,1.088571,1.088571,1.088571,0,336,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-8063160503150200351,CREATE EXTENSION IF NOT EXISTS pg_stat_statements,0,0,0,0,0,0,1,32.471049,32.471049,32.471049,32.471049,0,0,1823,153,57,1,0,0,0,0,0,0,0,0,348,40,216673
+10,16385,-1223765790011969516,"COPY (SELECT c.oid, c.relname, c.relkind, st.* FROM pg_class AS c, pgstattuple(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind IN ('r', 'i') ORDER BY relkind, relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,701590.126346,701590.126346,701590.126346,701590.126346,0,19,22961173,28001861,0,0,0,0,0,0,0,0,0,0,1,0,56
+10,16385,-1955052314674129380,DROP FUNCTION pg_stat_statements(boolean),0,0,0,0,0,0,1,0.02096,0.02096,0.02096,0.02096,0,0,17,0,0,0,0,0,0,0,0,0,0,0,2,0,108
+10,16385,-8610820246424350903,CREATE EXTENSION IF NOT EXISTS pgstattuple,0,0,0,0,0,0,1,0.120665,0.120665,0.120665,0.120665,0,0,26,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,4093376936271767923,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_09 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4287267,115959360.19783746,0.08882799999999999,3949.764732,27.047384778653637,30.60746157333604,4287267,284775922,5785337,9045250,3559899,0,0,0,0,0,0,0,0,70982133,6826968,57160453871
+16384,16385,-6634152094007900685,"SELECT count(c_last)                   FROM customer
+		WHERE c_last = p_c_last AND c_d_id = p_c_d_id AND c_w_id = p_c_w_id",0,0,0,0,0,0,25718740,603902.826700872,0.006328,213.5968,0.023481042488899394,0.27124540427546573,25718740,102852384,22577,0,8533,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-3153393944680881597,"SELECT COUNT(DISTINCT (s_i_id))                     FROM order_line, stock, district
+	 WHERE ol_w_id = st_w_id
+	   AND ol_d_id = st_d_id
+	   AND d_w_id=st_w_id
+	   AND d_id=st_d_id
+	   AND (ol_o_id < d_next_o_id)
+	   AND ol_o_id >= (d_next_o_id - $4)
+	   AND s_w_id = st_w_id
+	   AND s_i_id = ol_i_id
+	   AND s_quantity < threshold",0,0,0,0,0,0,4288498,853356881.4593999,0.84854,407489.31313,198.98735675274298,6536.977081723397,4288498,7005298193,65538623,23344794,40930578,0,0,0,0,0,0,0,0,61593398,12486244,90074329068
+16384,16385,7805563444056621248,"prepare slev (INTEGER, INTEGER, INTEGER) AS select slev($1,$2,$3)",0,0,0,0,0,0,4288498,856845843.5011636,1.105257,407494.518966,199.8009194597305,6537.082581168552,4288498,7107174762,65538625,23344802,40930578,0,0,0,0,0,0,0,0,61593535,12486244,90074337736
+16384,16385,3146213974054045385,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_07 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4290659,116071317.91026974,0.09045,3982.159627,27.052095706108123,30.522358013163064,4290659,284895011,5777616,9038723,3589267,0,0,0,0,0,0,0,0,71007733,6823971,57138833222
+16384,16385,4460119764285545957,"UPDATE district
+	   SET d_ytd = d_ytd + p_h_amount
+	 WHERE d_w_id = p_w_id AND d_id = p_d_id
+	 RETURNING d_street_1, d_street_2, d_city, d_state, d_zip, d_name",0,0,0,0,0,0,42864124,51682103.98621197,0.007629,17847.101125,1.205719356033557,18.323163583502062,42864124,1390296590,36340,173133,108537,0,0,0,0,0,0,0,0,52465046,103135,4252673161
+16384,16385,-6878999695789477799,"SELECT array_agg ( i_price )
+	                  FROM UNNEST(item_id_array) item_id
+	LEFT JOIN item ON i_id = item_id",0,0,0,0,0,0,42880449,3113740.904623912,0.023482999999999997,30.256944,0.07261446596847522,0.0630371136185014,42880449,1285963336,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-2647570482193401819,"SELECT c_first, c_middle, c_id,
+				c_street_1, c_street_2, c_city, c_state, c_zip,
+				c_phone, c_credit, c_credit_lim,
+				c_discount, c_balance, c_since
+		  FROM customer
+		 WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_last = p_c_last
+		ORDER BY c_first",0,0,0,0,0,0,25718740,1134.1623251673136,2e-05,0.416415,4.409867376861515e-05,0.0002353640876622846,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3085278641555168774,"/* contrib/pg_stat_statements/pg_stat_statements--1.4--1.5.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+GRANT EXECUTE ON FUNCTION pg_stat_statements_reset() TO pg_read_all_stats",0,0,0,0,0,0,1,0.648352,0.648352,0.648352,0.648352,0,0,13,2,0,0,0,0,0,0,0,0,0,0,2,0,218
+10,16385,-1368367109486112334,"COPY (SELECT oid, datname, pg_database_size(oid) AS size, pg_size_pretty(pg_database_size(oid)) AS size_pretty FROM pg_database ORDER BY datname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,6.267426,6.267426,6.267426,6.267426,0,4,167,4,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-1078331277510130863,"prepare neword (INTEGER, INTEGER, INTEGER, INTEGER, INTEGER) as select neword($1,$2,$3,$4,$5,$6)",0,0,0,0,0,0,42880449,1622387530.8901737,0.41222699999999995,31551.454234,37.83513392991301,128.47266444540327,42880449,9342785370,62422993,107312126,54842141,0,0,0,0,0,0,0,0,1854357898,71700287,720894571079
+16384,16385,9204741588923035594,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_02 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4288777,115886590.21756919,0.087728,2718.8373540000002,27.020894352300807,30.455234061213815,4288777,284715610,5780079,9037503,3578440,0,0,0,0,0,0,0,0,70956021,6830754,57179831577
+10,16385,7006596884713020434,"COPY (SELECT c.oid, c.relname, st.* FROM pg_class AS c, pgstatindex(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind = $2 ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,14242.967882,14242.967882,14242.967882,14242.967882,0,10,492,5040994,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-6004647946072862589,"/* contrib/pg_stat_statements/pg_stat_statements--1.8--1.9.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+--- Define pg_stat_statements_info
+CREATE FUNCTION pg_stat_statements_info(
+    OUT dealloc bigint
+)
+RETURNS bigint
+AS '$libdir/pg_stat_statements'
+LANGUAGE C STRICT VOLATILE PARALLEL SAFE",0,0,0,0,0,0,1,0.157181,0.157181,0.157181,0.157181,0,0,37,0,0,0,0,0,0,0,0,0,0,0,9,0,964
+10,16385,-5005008434753111192,"/* Then we can drop them */
+DROP FUNCTION pg_stat_statements_reset()",0,0,0,0,0,0,1,1.209494,1.209494,1.209494,1.209494,0,0,62,3,0,0,0,0,0,0,0,0,0,0,2,0,108
+16384,16385,-1611409772586070018,"UPDATE orders
+	   SET o_carrier_id = d_o_carrier_id
+	  FROM UNNEST(o_id_array, d_id_array) AS ids(o_id, d_id)
+	 WHERE orders.o_id = ids.o_id
+	   AND o_d_id = ids.d_id
+	   AND o_w_id = d_w_id",0,0,0,0,0,0,4285378,104939507.02151412,0.0012720000000000001,9449.364909,24.48780644823484,83.43915902978584,41565010,441166145,759608,1778193,962958,0,0,0,0,0,0,0,0,107697659,1081476,17129092955
+10,16385,1696246093344171825,"WITH
+settings (block_size, shared_buffers, effective_cache_size) AS (
+    VALUES (pg_size_bytes(current_setting($1)),
+            pg_size_bytes(current_setting($2)),
+            pg_size_bytes(current_setting($3)))
+),
+rels (oid, size) AS (
+    SELECT oid, sum(relpages) OVER (ORDER BY relpages)
+    FROM pg_class
+    WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $4)
+      AND relkind IN ($5, $6)
+)
+SELECT pg_prewarm(r.oid, CASE WHEN r.size * s.block_size <= s.shared_buffers THEN $7 ELSE $8 END)
+FROM rels AS r,
+     settings AS s
+WHERE r.size * s.block_size <= GREATEST(s.shared_buffers, s.effective_cache_size)",0,0,0,0,0,0,1,573198.520109,573198.520109,573198.520109,573198.520109,0,19,1349354,9587923,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,970046722568942508,"INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id,h_w_id, h_date, h_amount, h_data)
+	VALUES (p_c_d_id, p_c_w_id, p_c_id, p_d_id,	p_w_id, tstamp, p_h_amount, p_w_name || $40 || p_d_name)",0,0,0,0,0,0,42864124,4789086.949211954,0.002868,7557.735114,0.11172716253834698,13.151178621852656,42864124,56202957,401,495904,798198,0,0,0,0,0,0,0,0,42864124,1227,5060480505
+16384,16385,-9132442429867875828,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_10 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4286423,115863205.65522519,0.09089699999999999,2868.438341,27.030278079233025,30.586232291273156,4286423,284706464,5777311,9033396,3557920,0,0,0,0,0,0,0,0,70960825,6819570,57101457555
+10,16385,7101910292398537824,"CREATE VIEW pg_stat_statements AS
+  SELECT * FROM pg_stat_statements(true)",0,0,0,0,0,0,1,1.247276,1.247276,1.247276,1.247276,0,0,414,8,9,1,0,0,0,0,0,0,0,0,105,3,26043
+16384,16385,370524213373432139,select sum(xact_commit + xact_rollback) from pg_stat_database,0,0,0,0,0,0,2,20.659148000000002,10.296786,10.362362,10.329574000000001,0.032787999999999595,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,2484029666394392913,"INSERT INTO ORDERS (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (no_d_next_o_id, no_d_id, no_w_id, no_c_id, current_timestamp, no_o_ol_cnt, no_o_all_local)",0,0,0,0,0,0,42880449,10260551.492172198,0.017728999999999998,9280.134491,0.23928274380177636,14.498978181140629,42880449,398595725,1037578,2817516,1890073,0,0,0,0,0,0,0,0,129129517,1622159,21351546648
+10,16385,917985111726715284,COPY (SELECT sum(size) AS wal_size FROM pg_ls_waldir()) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,11.106,11.106,11.106,11.106,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7239828280932003960,"COPY (SELECT oid, relname, relkind, pg_table_size(oid) AS size, pg_size_pretty(pg_table_size(oid)) AS size_pretty FROM pg_class WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind IN ('r', 'i') ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,4.965543,4.965543,4.965543,4.965543,0,19,740,11,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-3934502812522840584,"UPDATE customer
+	   SET c_balance = COALESCE(c_balance,$11) + ids_and_sums.sum_amounts
+	  FROM UNNEST(d_id_array, c_id_array, sum_amounts) AS ids_and_sums(d_id, c_id, sum_amounts)
+	 WHERE customer.c_id = ids_and_sums.c_id
+	   AND c_d_id = ids_and_sums.d_id
+	   AND c_w_id = d_w_id",0,0,0,0,0,0,4285378,92487465.99506368,0.0010270000000000001,2765.4290809999998,21.582102207801224,25.843221812100072,41565010,293069183,3614065,8121355,2414739,0,0,0,0,0,0,0,0,67506580,5562062,45048840617
+10,16385,3746784141851241444,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,2.5895520000000003,1.063337,1.526215,1.2947760000000001,0.231439,240,34,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7415834902359401553,select max(d_id) from district,0,0,0,0,0,0,500,6300.396233000001,2.937911,339.544905,12.600792466000005,23.55857341174604,500,231693,1,0,0,0,0,0,0,0,0,0,0,29625,0,2074708
+16384,16385,-6390831434710172478,"UPDATE customer
+		   SET c_balance = p_c_balance - p_h_amount,
+		       c_data = substr ((p_c_id || $16 ||
+                                 p_c_d_id || $17 ||
+                                 p_c_w_id || $18 ||
+                                 p_d_id || $19 ||
+                                 p_w_id || $20 ||
+                                 to_char (p_h_amount, $21) || $22) || c_data, $23, $24)
+		 WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id
+		RETURNING c_balance, c_data",0,0,0,0,0,0,8569599,1322511.0965168742,0.015786,2492.518461,0.15432590212412758,3.472747564507652,8569599,68848042,575957,2534207,598832,0,0,0,0,0,0,0,0,12802718,2101745,18473731674
+10,16385,8565171400252749021,COPY (SELECT sum(size) AS wal_size FROM pg_ls_waldir()) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,11.958973,11.958973,11.958973,11.958973,0,1,43,3,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,182993541420010127,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,21.987187,10.677911,11.309276,10.9935935,0.31568249999999987,10,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,4700712947455094827,"WITH order_line_update AS (
+        UPDATE order_line
+           SET ol_delivery_d = current_timestamp
+		  FROM UNNEST(o_id_array, d_id_array) AS ids(o_id, d_id)
+		 WHERE ol_o_id = ids.o_id
+           AND ol_d_id = ids.d_id
+           AND ol_w_id = d_w_id
+		RETURNING ol_d_id, ol_o_id, ol_amount
+		)
+	SELECT array_agg(ol_d_id), array_agg(c_id), array_agg(sum_amount)
+	  FROM ( SELECT ol_d_id,
+			       ( SELECT DISTINCT o_c_id FROM orders WHERE o_id = ol_o_id AND o_d_id = ol_d_id AND o_w_id = d_w_id) AS c_id,
+			        sum(ol_amount) AS sum_amount
+			   FROM order_line_update
+			  GROUP BY ol_d_id, ol_o_id ) AS inner_sum",0,0,0,0,0,0,4285378,267689638.9643599,0.003162,31399.812813,62.465817242810644,188.12410251554144,4285378,2112043461,9086121,14823219,11262361,0,0,0,0,0,0,0,0,847728987,10397777,151691416349
+16384,16385,5616180274698321996,set CLIENT_MIN_MESSAGES TO 'ERROR',0,0,0,0,0,0,501,1.6426249999999987,0.0014,0.017035,0.003278692614770459,0.0016845889568136531,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7918189387522236705,COPY (SELECT * FROM pg_stat_statements) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,0.18315599999999999,0.18315599999999999,0.18315599999999999,0.18315599999999999,0,29,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,2293821161954435067,select max(w_id) from warehouse,0,0,0,0,0,0,500,56.43721099999996,0.07988,0.611169,0.11287442199999995,0.03426070704605956,500,1998,1,0,0,0,0,0,0,0,0,0,0,21,0,1718
+16384,16385,-2353609686948106797,"WITH new_order_delete AS (
+		DELETE
+		 FROM new_order as del_new_order
+		USING UNNEST(d_id_in_array) AS d_ids
+		WHERE no_d_id = d_ids
+		  AND no_w_id = d_w_id
+		  AND del_new_order.no_o_id = (select min (select_new_order.no_o_id)
+						   from new_order as select_new_order
+						  where no_d_id = d_ids
+							and no_w_id = d_w_id)
+		RETURNING del_new_order.no_o_id, del_new_order.no_d_id
+		)
+	SELECT array_agg(no_o_id), array_agg(no_d_id)
+	  FROM new_order_delete",0,0,0,0,0,0,4285378,32167499.528644264,0.250991,14070.853144,7.506338887407563,48.52869592118846,4285378,1339781431,267785,388416,155739,0,0,0,0,0,0,0,0,43678088,185701,3779559623
+16384,16385,431293040050433973,set client_encoding to 'UTF8',0,0,0,0,0,0,501,5.182651000000001,0.006069,0.024411,0.010344612774451088,0.0030692074067331155,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7533225032783268226,"SELECT ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d, out_os_c_id, out_os_c_last, os_c_first, os_c_middle, os_c_balance, os_o_id, os_entdate, os_o_carrier_id
+FROM order_line
+WHERE ol_o_id = os_o_id AND ol_d_id = os_d_id AND ol_w_id = os_w_id",0,0,0,0,0,0,4281491,7727457.037349438,0.000372,1627.279354,1.804851869909391,7.611145879747606,0,12755396,1986321,940842,1204880,0,0,0,0,0,0,0,0,588451,326336,1919590104
+16384,16385,-4801657760092627767,select sum(d_next_o_id) from district,0,0,0,0,0,0,2,5137.144249999999,81.070218,5056.0740319999995,2568.5721249999997,2487.501907,2,49814,45533,0,35675,0,0,0,0,0,0,0,0,15,0,2612
+10,16385,9219655088872814515,"CREATE FUNCTION pg_stat_statements(IN showtext boolean,
+    OUT userid oid,
+    OUT dbid oid,
+    OUT queryid bigint,
+    OUT query text,
+    OUT calls int8,
+    OUT total_time float8,
+    OUT min_time float8,
+    OUT max_time float8,
+    OUT mean_time float8,
+    OUT stddev_time float8,
+    OUT rows int8,
+    OUT shared_blks_hit int8,
+    OUT shared_blks_read int8,
+    OUT shared_blks_dirtied int8,
+    OUT shared_blks_written int8,
+    OUT local_blks_hit int8,
+    OUT local_blks_read int8,
+    OUT local_blks_dirtied int8,
+    OUT local_blks_written int8,
+    OUT temp_blks_read int8,
+    OUT temp_blks_written int8,
+    OUT blk_read_time float8,
+    OUT blk_write_time float8
+)
+RETURNS SETOF record
+AS '$libdir/pg_stat_statements', 'pg_stat_statements_1_3'
+LANGUAGE C STRICT VOLATILE PARALLEL SAFE",0,0,0,0,0,0,1,0.684876,0.684876,0.684876,0.684876,0,0,99,2,0,0,0,0,0,0,0,0,0,0,9,0,1483
+10,16385,1293503152993561188,GRANT SELECT ON pg_stat_statements_info TO PUBLIC,0,0,0,0,0,0,1,0.046102,0.046102,0.046102,0.046102,0,0,20,0,0,0,0,0,0,0,0,0,0,0,3,0,306
+10,16385,-765267056411509909,"CREATE VIEW pg_stat_statements_info AS
+  SELECT * FROM pg_stat_statements_info()",0,0,0,0,0,0,1,0.502842,0.502842,0.502842,0.502842,0,0,145,0,0,0,0,0,0,0,0,0,0,0,38,0,4461
+16384,16385,-2191282415900254027,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_06 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4287154,115942575.19973648,0.091213,4598.921837,27.0441825042295,30.688438592529806,4287154,284641519,5779488,9037643,3564135,0,0,0,0,0,0,0,0,70945669,6818250,57092028525
+16384,16385,-5182145715340391,"SELECT c_balance, c_first, c_middle, c_id
+FROM customer
+WHERE c_last = os_c_last AND c_d_id = os_d_id AND c_w_id = os_w_id
+ORDER BY c_first",0,0,0,0,0,0,2569051,22858.797351997746,0.004125,3.335373,0.008897759270640331,0.009085973867005931,0,10276204,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,2263305261813125291,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_05 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4286817,115914988.84597647,0.08834499999999999,4772.312871,27.039873371309138,30.75529149822724,4286817,284699976,5783001,9040758,3578472,0,0,0,0,0,0,0,0,70956999,6817438,57089753867
+10,16385,-3232140260748463617,"/* contrib/pg_stat_statements/pg_stat_statements--1.5--1.6.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+-- Execution is only allowed for superusers, fixing issue with 1.5.
+REVOKE EXECUTE ON FUNCTION pg_stat_statements_reset() FROM pg_read_all_stats",0,0,0,0,0,0,1,0.074503,0.074503,0.074503,0.074503,0,0,12,0,0,0,0,0,0,0,0,0,0,0,2,0,194
+16384,16385,-8328130615483635141,"SELECT c_balance, c_first, c_middle, c_last
+                                                      FROM customer
+WHERE c_id = os_c_id AND c_d_id = os_d_id AND c_w_id = os_w_id",0,0,0,0,0,0,1712440,4155612.331958901,0.010006999999999999,1330.4832740000002,2.4267199621352282,7.131393994269516,1712440,8547198,130085,105072,65203,0,0,0,0,0,0,0,0,595751,59031,421925825
+10,16385,9123510028664027085,CREATE EXTENSION IF NOT EXISTS pg_prewarm,0,0,0,0,0,0,1,0.256852,0.256852,0.256852,0.256852,0,0,26,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,8791746904918487037,"COPY (SELECT c.oid, c.relname, st.* FROM pg_class AS c, pgstatindex(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind = 'i' ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,14245.897093,14245.897093,14245.897093,14245.897093,0,10,764,5040995,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-1712481118449147880,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,7.4376549999999995,2.170958,5.266697,3.7188274999999997,1.5478695,342,1985,9,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7972151088748486849,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,1.3552,0.608101,0.747099,0.6776,0.06949899999999998,342,1068,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,1853360303766900591,"UPDATE district SET d_next_o_id = d_next_o_id + $4 WHERE d_id = no_d_id AND d_w_id = no_w_id RETURNING d_next_o_id, d_tax",0,0,0,0,0,0,42880449,57087798.62858601,0.012336,28942.380086,1.3313246470106366,21.766344790880282,42880449,1392365325,36814,176391,105088,0,0,0,0,0,0,0,0,52690298,104224,4209018409
+10,16385,4170531953983266812,"COPY (SELECT c.oid, c.relname, c.relkind, st.* FROM pg_class AS c, pgstattuple(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind IN ($2, $3) ORDER BY relkind, relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,701587.608981,701587.608981,701587.608981,701587.608981,0,19,22960836,28001859,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,6421012585356148334,"INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
+	SELECT no_d_next_o_id,
+		   no_d_id,
+		   no_w_id,
+		   data.line_number,
+		   data.item_id,
+		   data.supply_wid,
+		   data.quantity,
+		   data.amount,
+		   data.stock_dist
+	  FROM UNNEST(order_line_array,
+				   item_id_array,
+				   supply_wid_array,
+				   quantity_array,
+				   amount_array,
+				   stock_dist_array)
+		   AS data( line_number, item_id, supply_wid, quantity, amount, stock_dist)",0,0,0,0,0,0,42880449,251528848.2798952,0.039656000000000004,29212.459213,5.865816570155277,121.62877669252188,428797428,2253782614,21459,10507251,15149383,0,0,0,0,0,0,0,0,861425816,127804,106145978704
+16384,16385,-6544852717061320798,"prepare ostat (INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR) AS select * from ostat($1,$2,$3,$4,$5) as (ol_i_id NUMERIC,  ol_supply_w_id NUMERIC, ol_quantity NUMERIC, ol_amount NUMERIC, ol_delivery_d TIMESTAMP,  out_os_c_id INTEGER, out_os_c_last VARCHAR, os_c_first VARCHAR, os_c_middle VARCHAR, os_c_balance NUMERIC, os_o_id INTEGER, os_entdate TIMESTAMP, os_o_carrier_id INTEGER)",0,0,0,0,0,0,4281491,20968376.988031305,0.053132,1632.4684499999998,4.8974474051289985,16.96413589766186,14614505,49838923,2709058,1326704,1631800,0,0,0,0,0,0,0,0,1491371,502423,3213515341
+16384,16385,-6942467781881253082,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_08 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4288161,115860595.73366578,0.090578,3974.1959690000003,27.018714020686325,30.607609930644195,4288161,284743646,5780602,9038078,3569624,0,0,0,0,0,0,0,0,70958684,6829739,57174762426
+10,16385,5332373096099443151,"/* Then we can drop them */
+DROP VIEW pg_stat_statements",0,0,0,0,0,0,1,0.590743,0.590743,0.590743,0.590743,0,0,139,4,0,0,0,0,0,0,0,0,0,0,33,0,1782
+10,16385,1356024902385697363,"/* Now redefine */
+CREATE FUNCTION pg_stat_statements(IN showtext boolean,
+    OUT userid oid,
+    OUT dbid oid,
+    OUT queryid bigint,
+    OUT query text,
+    OUT plans int8,
+    OUT total_plan_time float8,
+    OUT min_plan_time float8,
+    OUT max_plan_time float8,
+    OUT mean_plan_time float8,
+    OUT stddev_plan_time float8,
+    OUT calls int8,
+    OUT total_exec_time float8,
+    OUT min_exec_time float8,
+    OUT max_exec_time float8,
+    OUT mean_exec_time float8,
+    OUT stddev_exec_time float8,
+    OUT rows int8,
+    OUT shared_blks_hit int8,
+    OUT shared_blks_read int8,
+    OUT shared_blks_dirtied int8,
+    OUT shared_blks_written int8,
+    OUT local_blks_hit int8,
+    OUT local_blks_read int8,
+    OUT local_blks_dirtied int8,
+    OUT local_blks_written int8,
+    OUT temp_blks_read int8,
+    OUT temp_blks_written int8,
+    OUT blk_read_time float8,
+    OUT blk_write_time float8,
+    OUT wal_records int8,
+    OUT wal_fpi int8,
+    OUT wal_bytes numeric
+)
+RETURNS SETOF record
+AS '$libdir/pg_stat_statements', 'pg_stat_statements_1_8'
+LANGUAGE C STRICT VOLATILE PARALLEL SAFE",0,0,0,0,0,0,1,0.090317,0.090317,0.090317,0.090317,0,0,65,0,0,0,0,0,0,0,0,0,0,0,9,0,1715
+10,16385,-426837983829620913,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,0.266983,0.11819500000000001,0.148788,0.1334915,0.015296499999999994,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-5503015821804286934,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_03 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4286760,115832963.0408643,0.084251,3970.8815619999996,27.02109822822969,30.63450470045245,4286760,284671570,5778659,9037498,3570220,0,0,0,0,0,0,0,0,70938826,6821617,57121063851
+10,16385,5647889157396938542,"-- Register a view on the function for ease of use.
+CREATE VIEW pg_stat_statements AS
+  SELECT * FROM pg_stat_statements(true)",0,0,0,0,0,0,1,7.749601,7.749601,7.749601,7.749601,0,0,313,49,25,0,0,0,0,0,0,0,0,0,82,20,96764
+10,16385,-3832115078929431881,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,27.867812999999998,12.471934,15.395879,13.933906499999999,1.4619725000000003,240,1060,68,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3928201315673746786,"-- Don't want this to be available to non-superusers.
+REVOKE ALL ON FUNCTION pg_stat_statements_reset() FROM PUBLIC",0,0,0,0,0,0,1,0.024256,0.024256,0.024256,0.024256,0,0,7,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+10,16385,-3655516217747249099,"/* contrib/pg_stat_statements/pg_stat_statements--1.6--1.7.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+/* First we have to remove them from the extension */
+ALTER EXTENSION pg_stat_statements DROP FUNCTION pg_stat_statements_reset()",0,0,0,0,0,0,1,0.064491,0.064491,0.064491,0.064491,0,0,18,0,0,0,0,0,0,0,0,0,0,0,2,0,108
+16384,16385,-748893500118439722,"UPDATE customer
+		   SET c_balance = p_c_balance - p_h_amount
+		 WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id
+		RETURNING c_balance, $16",0,0,0,0,0,0,34294525,70378741.98075461,0.010267,2522.7383,2.052185938739333,7.024710485570247,34294525,269320764,7644224,12628678,5302728,0,0,0,0,0,0,0,0,59352958,10000245,81218671454
+16384,16385,-4799176404846748336,"SELECT c_discount, c_last, c_credit, w_tax
+	                                                      FROM customer, warehouse
+	WHERE warehouse.w_id = no_w_id AND customer.c_w_id = no_w_id AND customer.c_d_id = no_d_id AND customer.c_id = no_c_id",0,0,0,0,0,0,42880449,116843675.47283407,0.013271999999999999,1870.608636,2.7248706158101865,7.357038524189407,42880449,936538849,3267541,2652576,1637790,0,0,0,0,0,0,0,0,15313235,1502647,10715320073
+10,16385,-6737802796196108371,"/* contrib/pg_stat_statements/pg_stat_statements--1.4.sql */
+
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+
+
+-- Register functions.
+CREATE FUNCTION pg_stat_statements_reset()
+RETURNS void
+AS '$libdir/pg_stat_statements'
+LANGUAGE C PARALLEL SAFE",0,0,0,0,0,0,1,5.310632,5.310632,5.310632,5.310632,0,0,32,31,6,0,0,0,0,0,0,0,0,0,9,5,26752
+10,16385,-2249120274633451873,"-- Don't want this to be available to non-superusers.
+REVOKE ALL ON FUNCTION pg_stat_statements_reset(Oid, Oid, bigint) FROM PUBLIC",0,0,0,0,0,0,1,0.493701,0.493701,0.493701,0.493701,0,0,16,1,1,0,0,0,0,0,0,0,0,0,6,1,4796
+10,16385,-4315321953012072193,"/* contrib/pg_stat_statements/pg_stat_statements--1.7--1.8.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+/* First we have to remove them from the extension */
+ALTER EXTENSION pg_stat_statements DROP VIEW pg_stat_statements",0,0,0,0,0,0,1,0.309644,0.309644,0.309644,0.309644,0,0,113,0,0,0,0,0,0,0,0,0,0,0,2,0,108
+16384,16385,1185135414704089442,"INSERT INTO NEW_ORDER (no_o_id, no_d_id, no_w_id) VALUES (no_d_next_o_id, no_d_id, no_w_id)",0,0,0,0,0,0,42880449,3260818.556436794,0.007106,1481.3379260000002,0.07604441260483735,1.8976004140627045,42880449,218280004,261201,472364,358879,0,0,0,0,0,0,0,0,86140197,102918,7113454654
+10,16385,-1958296638886584692,"COPY (SELECT oid, datname, pg_database_size(oid) AS size, pg_size_pretty(pg_database_size(oid)) AS size_pretty FROM pg_database ORDER BY datname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,5.151806,5.151806,5.151806,5.151806,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-8765438682559606498,"COPY (SELECT oid, relname, relkind, pg_table_size(oid) AS size, pg_size_pretty(pg_table_size(oid)) AS size_pretty FROM pg_class WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind IN ($2, $3) ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,1.6912349999999998,1.6912349999999998,1.6912349999999998,1.6912349999999998,0,19,466,7,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,1475777297817213779,"prepare delivery (INTEGER, INTEGER) AS select delivery($1,$2)",0,0,0,0,0,0,4285378,499112495.4262713,0.555145,31430.520437,116.46872117845953,225.23293027251944,4285378,4186629259,13727591,25126797,14795802,0,0,0,0,0,0,0,0,1066611342,17227016,217648911498
+16384,16385,-4247501809817879922,"SELECT count(c_id)              FROM customer
+WHERE c_last = os_c_last AND c_d_id = os_d_id AND c_w_id = os_w_id",0,0,0,0,0,0,2569051,59419.83025200045,0.006437,15.767258,0.023129097184913038,0.03207035795971703,2569051,10276191,13,0,3,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-8026862708709542006,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_04 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4290717,115946791.09711403,0.087938,2723.555523,27.022707649350714,30.687305531842224,4290717,284882670,5783121,9038961,3563281,0,0,0,0,0,0,0,0,71003645,6825575,57151113809
+16384,16385,2946833309602415982,"SELECT o_id, o_carrier_id, o_entry_d
+                                          FROM
+(SELECT o_id, o_carrier_id, o_entry_d
+FROM orders where o_d_id = os_d_id AND o_w_id = os_w_id and o_c_id=os_c_id
+ORDER BY o_id DESC) AS SUBQUERY
+LIMIT $4",0,0,0,0,0,0,4281491,8190719.979855624,0.000955,1329.281929,1.913053181673355,12.577818675150501,1461014,7736908,592633,273350,361710,0,0,0,0,0,0,0,0,307163,117056,871999006
+10,16385,435174621275570554,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,37.179895,17.861139,19.318756,18.5899475,0.7288084999999995,10,313,45,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-5109480985238204195,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,1.8119070000000002,0.480098,1.331809,0.9059535000000001,0.42585549999999994,2,126,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7420141619450328612,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_01 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,4287714,116030319.20544818,0.08562499999999999,3929.803893,27.06111443194218,30.73615901759168,4287714,284645765,5773151,9029672,3569657,0,0,0,0,0,0,0,0,70948182,6826653,57149946084
+16384,16385,-905751954451140908,"UPDATE warehouse
+	   SET w_ytd = w_ytd + p_h_amount
+	 WHERE w_id = p_w_id
+	 RETURNING w_street_1, w_street_2, w_city, w_state, w_zip, w_name",0,0,0,0,0,0,42864124,42417379.828134894,0.012394,9171.043024999999,0.9895776670517946,9.597990000025925,42864124,889865640,25706,106949,87773,0,0,0,0,0,0,0,0,46385618,87354,3437582858
+10,16385,-8092650902402444792,GRANT SELECT ON pg_stat_statements TO PUBLIC,0,0,0,0,0,0,2,0.32538500000000004,0.092502,0.232883,0.16269250000000002,0.07019050000000002,0,64,7,3,0,0,0,0,0,0,0,0,0,6,2,7846
+10,16385,7360949727111689113,"/* Now redefine */
+CREATE FUNCTION pg_stat_statements_reset(IN userid Oid DEFAULT 0,
+	IN dbid Oid DEFAULT 0,
+	IN queryid bigint DEFAULT 0
+)
+RETURNS void
+AS '$libdir/pg_stat_statements', 'pg_stat_statements_reset_1_7'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,1.981772,1.981772,1.981772,1.981772,0,0,58,7,2,0,0,0,0,0,0,0,0,0,9,1,7900
+16384,16385,-8510932688903535971,"prepare payment (INTEGER, INTEGER, INTEGER, INTEGER, NUMERIC, INTEGER, NUMERIC, VARCHAR) AS select payment($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",0,0,0,0,0,0,42864124,225783955.43196514,0.11746100000000001,17858.595051,5.2674342634888465,25.776737667151732,42864124,2867148232,11939624,17750328,8993869,0,0,0,0,0,0,0,0,219988586,13482451,121104077651
+16384,16385,7600421372377770447,"SELECT c_first, c_middle, c_last,
+		c_street_1, c_street_2, c_city, c_state, c_zip,
+		c_phone, c_credit, c_credit_lim,
+		c_discount, c_balance, c_since
+		                                                                                                                                                                                    FROM customer
+		WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id",0,0,0,0,0,0,17145384,44188869.334298804,0.008442,1694.5871860000002,2.5773041498695464,7.108449982919039,17145384,83253401,3634376,1688450,2089262,0,0,0,0,0,0,0,0,6117912,1188744,8660916608
+10,16385,7104491036261723972,COPY (SELECT * FROM pg_settings) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,2.633531,2.633531,2.633531,2.633531,0,336,36,3,0,0,0,0,0,0,0,0,0,0,0,0,0

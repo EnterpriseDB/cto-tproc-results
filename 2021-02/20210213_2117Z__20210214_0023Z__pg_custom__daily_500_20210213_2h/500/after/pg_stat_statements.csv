@@ -1,0 +1,543 @@
+userid,dbid,queryid,query,plans,total_plan_time,min_plan_time,max_plan_time,mean_plan_time,stddev_plan_time,calls,total_exec_time,min_exec_time,max_exec_time,mean_exec_time,stddev_exec_time,rows,shared_blks_hit,shared_blks_read,shared_blks_dirtied,shared_blks_written,local_blks_hit,local_blks_read,local_blks_dirtied,local_blks_written,temp_blks_read,temp_blks_written,blk_read_time,blk_write_time,wal_records,wal_fpi,wal_bytes
+10,16385,4781283453004295250,GRANT EXECUTE ON FUNCTION pgstathashindex(regclass) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.017095,0.017095,0.017095,0.017095,0,0,12,0,0,0,0,0,0,0,0,0,0,0,2,0,218
+10,16385,-6766677562622511123,COPY (SELECT * FROM pg_stat_statements) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,2.063564,2.063564,2.063564,2.063564,0,9,78,6,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-3277081815590599967,"SELECT count(c_id)              FROM customer
+WHERE c_last = os_c_last AND c_d_id = os_d_id AND c_w_id = os_w_id",0,0,0,0,0,0,3582405,157811.82046900582,0.005331000000000001,38.78878,0.04405192055867118,0.2990201514625395,3582405,14329642,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-9161215645090541878,select max(d_id) from district,0,0,0,0,0,0,500,4839.329573999997,2.077739,309.90570699999995,9.678659147999994,21.07224097730171,500,249860,1,0,0,0,0,0,0,0,0,0,0,35374,0,2416328
+16384,16385,-2417645673908377959,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_02 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5974679,61429061.81214123,0.081325,1476.641675,10.28156689457921,21.188885802188928,5974679,399224811,2333463,7511329,1259067,0,0,0,0,0,0,0,0,82828286,7427702,62176093198
+10,16385,-8063160503150200351,CREATE EXTENSION IF NOT EXISTS pg_stat_statements,0,0,0,0,0,0,1,0.307289,0.307289,0.307289,0.307289,0,0,17,4,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7291333052921632537,"prepare neword (INTEGER, INTEGER, INTEGER, INTEGER, INTEGER) as select neword($1,$2,$3,$4,$5,$6)",0,0,0,0,0,0,59754439,894486957.0919609,0.37483900000000003,2753.384666,14.96938088720305,25.037780711685286,59754439,13215220922,38456717,96972407,39243652,0,0,0,0,0,0,0,0,2414408255,79915751,798628834981
+10,16385,-1223765790011969516,"COPY (SELECT c.oid, c.relname, c.relkind, st.* FROM pg_class AS c, pgstattuple(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind IN ('r', 'i') ORDER BY relkind, relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,637912.631885,637912.631885,637912.631885,637912.631885,0,19,20741797,24788991,0,0,0,0,0,0,0,0,0,0,6,0,352
+10,16385,-8610820246424350903,CREATE EXTENSION IF NOT EXISTS pgstattuple,0,0,0,0,0,0,1,18.268951,18.268951,18.268951,18.268951,0,0,1268,70,36,1,0,0,0,0,0,0,0,0,216,29,180299
+10,16385,5671182608992049465,COPY (SELECT * FROM pg_settings) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,1.563525,1.563525,1.563525,1.563525,0,339,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-3190448050558166171,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_05 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5976590,61357146.75776726,0.07625499999999999,1067.794369,10.266246598439455,21.09200249199586,5976590,399328081,2335359,7514016,1262774,0,0,0,0,0,0,0,0,82846556,7427052,62176999492
+10,16385,7889668247544608713,REVOKE EXECUTE ON FUNCTION pgstatindex(text) FROM PUBLIC,0,0,0,0,0,0,1,0.599561,0.599561,0.599561,0.599561,0,0,19,1,1,0,0,0,0,0,0,0,0,0,6,1,8100
+10,16385,-9141043935656865573,"CREATE FUNCTION pgstatindex(IN relname regclass,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindexbyid'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.050416,0.050416,0.050416,0.050416,0,0,48,0,0,0,0,0,0,0,0,0,0,0,9,0,1181
+16384,16385,-8058108107800157528,"SELECT c_balance, c_first, c_middle, c_id
+FROM customer
+WHERE c_last = os_c_last AND c_d_id = os_d_id AND c_w_id = os_w_id
+ORDER BY c_first",0,0,0,0,0,0,3582405,34676.477575999896,0.002908,37.264974,0.00967966424120134,0.08278673745472515,0,14329620,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,3978750852532649465,"COPY (SELECT oid, datname, pg_database_size(oid) AS size, pg_size_pretty(pg_database_size(oid)) AS size_pretty FROM pg_database ORDER BY datname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,5.922944,5.922944,5.922944,5.922944,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,24324767057357215,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,21.319090000000003,10.65309,10.666,10.659545000000001,0.006454999999999433,10,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-1053197692998249427,REVOKE EXECUTE ON FUNCTION pgstattuple(regclass) FROM PUBLIC,0,0,0,0,0,0,1,0.047589,0.047589,0.047589,0.047589,0,0,12,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+16384,16385,-8587541730242030652,"WITH new_order_delete AS (
+		DELETE
+		 FROM new_order as del_new_order
+		USING UNNEST(d_id_in_array) AS d_ids
+		WHERE no_d_id = d_ids
+		  AND no_w_id = d_w_id
+		  AND del_new_order.no_o_id = (select min (select_new_order.no_o_id)
+						   from new_order as select_new_order
+						  where no_d_id = d_ids
+							and no_w_id = d_w_id)
+		RETURNING del_new_order.no_o_id, del_new_order.no_d_id
+		)
+	SELECT array_agg(no_o_id), array_agg(no_d_id)
+	  FROM new_order_delete",0,0,0,0,0,0,5969233,33008706.41680585,0.139154,5084.28924,5.529806998119305,34.10792543099941,5969233,1981432244,429180,579183,304605,0,0,0,0,0,0,0,0,61603251,267182,5213593748
+16384,16385,-8651340218711502550,select max(w_id) from warehouse,0,0,0,0,0,0,500,848.7545019999998,0.069065,242.661819,1.697509004000001,16.7895579430531,500,1993,1,0,0,0,0,0,0,0,0,0,0,7,0,814
+10,16385,-5133820801638620109,"CREATE OR REPLACE FUNCTION pg_relpages(IN relname text)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpages_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.129279,0.129279,0.129279,0.129279,0,0,39,0,0,0,0,0,0,0,0,0,0,0,8,0,797
+10,16385,-1368367109486112334,"COPY (SELECT oid, datname, pg_database_size(oid) AS size, pg_size_pretty(pg_database_size(oid)) AS size_pretty FROM pg_database ORDER BY datname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,7.292486,7.292486,7.292486,7.292486,0,4,171,6,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,5871932529255942364,"/* New stuff in 1.2 begins here */
+
+CREATE FUNCTION pgstattuple(IN reloid regclass,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuplebyid'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.086856,0.086856,0.086856,0.086856,0,0,47,1,1,0,0,0,0,0,0,0,0,0,9,1,8204
+10,16385,-5416379991914234699,"COPY (SELECT c.oid, c.relname, c.relkind, st.* FROM pg_class AS c, pgstattuple(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind IN ($2, $3) ORDER BY relkind, relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,637911.1788049999,637911.1788049999,637911.1788049999,637911.1788049999,0,19,20741441,24788990,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-8137953177001190508,"UPDATE district
+	   SET d_ytd = d_ytd + p_h_amount
+	 WHERE d_w_id = p_w_id AND d_id = p_d_id
+	 RETURNING d_street_1, d_street_2, d_city, d_state, d_zip, d_name",0,0,0,0,0,0,59764382,38638067.929137036,0.007069000000000001,2566.167045,0.6465066087203047,3.441328507385415,59764382,2183087224,35289,143321,99365,0,0,0,0,0,0,0,0,71214255,86478,5632456910
+16384,16385,8896445376527323401,"UPDATE orders
+	   SET o_carrier_id = d_o_carrier_id
+	  FROM UNNEST(o_id_array, d_id_array) AS ids(o_id, d_id)
+	 WHERE orders.o_id = ids.o_id
+	   AND o_d_id = ids.d_id
+	   AND o_w_id = d_w_id",0,0,0,0,0,0,5969233,95708393.15930636,0.0010869999999999999,5066.837783000001,16.033616573405425,76.9065597178836,58715260,551992795,1156914,1744292,1124340,0,0,0,0,0,0,0,0,132853329,1052407,17556351039
+10,16385,-881659611999927945,"/* New stuff in 1.2 begins here */
+
+CREATE OR REPLACE FUNCTION pgstattuple(IN reloid regclass,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuplebyid_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.136011,0.136011,0.136011,0.136011,0,0,42,0,0,0,0,0,0,0,0,0,0,0,8,0,1060
+16384,16385,7964562063631822031,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_03 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5977871,61375305.683288716,0.07811799999999999,1366.371693,10.267084332077633,21.105999905530126,5977871,399399242,2333014,7512738,1273226,0,0,0,0,0,0,0,0,82859483,7433388,62219353606
+10,16385,-6209476769686484145,"/* New stuff in 1.3 begins here */
+
+CREATE FUNCTION pgstattuple_approx(IN reloid regclass,
+    OUT table_len BIGINT,               -- physical table length in bytes
+    OUT scanned_percent FLOAT8,         -- what percentage of the table's pages was scanned
+    OUT approx_tuple_count BIGINT,      -- estimated number of live tuples
+    OUT approx_tuple_len BIGINT,        -- estimated total length in bytes of live tuples
+    OUT approx_tuple_percent FLOAT8,    -- live tuples in % (based on estimate)
+    OUT dead_tuple_count BIGINT,        -- exact number of dead tuples
+    OUT dead_tuple_len BIGINT,          -- exact total length in bytes of dead tuples
+    OUT dead_tuple_percent FLOAT8,      -- dead tuples in % (based on estimate)
+    OUT approx_free_space BIGINT,       -- estimated free space in bytes
+    OUT approx_free_percent FLOAT8)     -- free space in % (based on estimate)
+AS '$libdir/pgstattuple', 'pgstattuple_approx'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.545977,0.545977,0.545977,0.545977,0,0,47,1,1,0,0,0,0,0,0,0,0,0,9,1,8688
+16384,16385,2848260360797688196,"UPDATE customer
+		   SET c_balance = p_c_balance - p_h_amount,
+		       c_data = substr ((p_c_id || $16 ||
+                                 p_c_d_id || $17 ||
+                                 p_c_w_id || $18 ||
+                                 p_d_id || $19 ||
+                                 p_w_id || $20 ||
+                                 to_char (p_h_amount, $21) || $22) || c_data, $23, $24)
+		 WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id
+		RETURNING c_balance, c_data",0,0,0,0,0,0,11959221,2547400.4475794616,0.015269,1343.3650369999998,0.2130072224251912,2.318284198788203,11959221,94096956,569125,3757927,598537,0,0,0,0,0,0,0,0,17040533,2522562,22593531825
+10,16385,-7465348360820981658,"/* contrib/pgstattuple/pgstattuple--1.4.sql */
+
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+
+
+CREATE FUNCTION pgstattuple(IN relname text,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuple'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,4.439605,4.439605,4.439605,4.439605,0,0,73,20,6,0,0,0,0,0,0,0,0,0,9,5,34172
+16384,16385,-8169139316120750538,"prepare slev (INTEGER, INTEGER, INTEGER) AS select slev($1,$2,$3)",0,0,0,0,0,0,5971889,1015273699.4078035,0.50178,286519.750769,170.00880281058986,2633.5955936029363,5971889,81932065918,21831377,13617707,14057433,0,0,0,0,0,0,0,0,196385870,11631442,96632922090
+10,16385,1594136720473630204,REVOKE EXECUTE ON FUNCTION pgstattuple_approx(regclass) FROM PUBLIC,0,0,0,0,0,0,1,0.015207,0.015207,0.015207,0.015207,0,0,8,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+10,16385,5710526357416411007,GRANT EXECUTE ON FUNCTION pgstattuple(regclass) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.05408,0.05408,0.05408,0.05408,0,0,18,0,0,0,0,0,0,0,0,0,0,0,2,0,218
+10,16385,8395332438900674856,GRANT EXECUTE ON FUNCTION pg_relpages(text) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.055322,0.055322,0.055322,0.055322,0,0,15,0,0,0,0,0,0,0,0,0,0,0,2,0,218
+10,16385,-5744719873961986869,COPY (SELECT * FROM pg_stat_statements) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,0.209494,0.209494,0.209494,0.209494,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-9221933125350291022,"CREATE OR REPLACE FUNCTION pgstatindex(IN relname text,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindex_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,1.481863,1.481863,1.481863,1.481863,0,0,49,2,3,1,0,0,0,0,0,0,0,0,9,2,13418
+16384,16385,180107445800823547,"INSERT INTO NEW_ORDER (no_o_id, no_d_id, no_w_id) VALUES (no_d_next_o_id, no_d_id, no_w_id)",0,0,0,0,0,0,59754439,5994100.16449042,0.0050420000000000005,1476.439306,0.10031221554088297,1.4285169954400645,59754439,303854223,332646,494094,380472,0,0,0,0,0,0,0,0,119935966,163376,8952646707
+10,16385,5353842540958846297,"CREATE OR REPLACE FUNCTION pg_relpages(IN relname regclass)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpagesbyid_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.034695,0.034695,0.034695,0.034695,0,0,28,0,0,0,0,0,0,0,0,0,0,0,5,0,382
+10,16385,7239828280932003960,"COPY (SELECT oid, relname, relkind, pg_table_size(oid) AS size, pg_size_pretty(pg_table_size(oid)) AS size_pretty FROM pg_class WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind IN ('r', 'i') ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,2.268112,2.268112,2.268112,2.268112,0,19,613,12,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7766681659969259930,GRANT EXECUTE ON FUNCTION pgstattuple_approx(regclass) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.01775,0.01775,0.01775,0.01775,0,0,14,0,0,0,0,0,0,0,0,0,0,0,2,0,218
+16384,16385,5964614832438214052,"SELECT count(c_last)                   FROM customer
+		WHERE c_last = p_c_last AND c_d_id = p_c_d_id AND c_w_id = p_c_w_id",0,0,0,0,0,0,35853754,1451840.3045841192,0.004994,70.754788,0.04049339727673636,0.2886153868458008,35853754,143384425,30592,0,23309,0,0,0,0,0,0,0,0,0,0,0
+10,16385,4211707777389829041,"CREATE FUNCTION autoprewarm_dump_now()
+RETURNS pg_catalog.int8 STRICT
+AS '$libdir/pg_prewarm', 'autoprewarm_dump_now'
+LANGUAGE C",0,0,0,0,0,0,1,0.075521,0.075521,0.075521,0.075521,0,0,38,0,0,0,0,0,0,0,0,0,0,0,9,0,873
+16384,16385,-257378529056330555,"SELECT array_agg ( i_price )
+	                  FROM UNNEST(item_id_array) item_id
+	LEFT JOIN item ON i_id = item_id",0,0,0,0,0,0,59754439,9741416.445941402,0.019722,69.402009,0.1630241469749537,0.6415695209933766,59754439,1792018257,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,8565171400252749021,COPY (SELECT sum(size) AS wal_size FROM pg_ls_waldir()) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,8.2684,8.2684,8.2684,8.2684,0,1,44,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,3954205339262069756,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_06 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5973193,61486193.172569096,0.079284,1668.397737,10.293689350496393,21.215811919615184,5973193,399188353,2331655,7506638,1255572,0,0,0,0,0,0,0,0,82810759,7419589,62110612687
+10,16385,4025368465343339790,REVOKE EXECUTE ON FUNCTION pgstatginindex(regclass) FROM PUBLIC,0,0,0,0,0,0,1,0.043559,0.043559,0.043559,0.043559,0,0,8,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+10,16385,-5933505374238997490,COPY (SELECT sum(size) AS wal_size FROM pg_ls_waldir()) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,6.913163,6.913163,6.913163,6.913163,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-8060372706428953267,"UPDATE district SET d_next_o_id = d_next_o_id + $4 WHERE d_id = no_d_id AND d_w_id = no_w_id RETURNING d_next_o_id, d_tax",0,0,0,0,0,0,59754439,45364132.85891603,0.011424,2573.184304,0.7591759477305979,5.728789911042023,59754439,2186000587,35266,146721,105388,0,0,0,0,0,0,0,0,71433386,88869,5565836192
+16384,16385,5616180274698321996,set CLIENT_MIN_MESSAGES TO 'ERROR',0,0,0,0,0,0,501,1.833870999999999,0.001688,0.022637,0.0036604211576846293,0.001780990457652975,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3651121346582562475,"COPY (SELECT oid, relname, relkind, pg_table_size(oid) AS size, pg_size_pretty(pg_table_size(oid)) AS size_pretty FROM pg_class WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind IN ($2, $3) ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,1.313689,1.313689,1.313689,1.313689,0,19,333,5,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3845857942904937752,GRANT EXECUTE ON FUNCTION pgstatindex(text) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.633761,0.633761,0.633761,0.633761,0,0,29,1,1,0,0,0,0,0,0,0,0,0,5,1,7416
+16384,16385,431293040050433973,set client_encoding to 'UTF8',0,0,0,0,0,0,501,5.1338289999999995,0.006268,0.025891,0.010247163672654703,0.0030314155486670397,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7715349870621758574,"SELECT c_balance, c_first, c_middle, c_last
+                                                      FROM customer
+WHERE c_id = os_c_id AND c_d_id = os_d_id AND c_w_id = os_w_id",0,0,0,0,0,0,2388832,3099019.552091209,0.008157,1598.678664,1.2972948922699077,5.49015014022831,2388832,11844590,409164,201991,303979,0,0,0,0,0,0,0,0,670589,64920,447746778
+16384,16385,-9093401524006384622,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_09 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5972379,61449882.68616896,0.07788099999999999,1412.731339,10.289012583787832,21.201389928073286,5972379,399096170,2330751,7509152,1250417,0,0,0,0,0,0,0,0,82800369,7424124,62145862034
+10,16385,-6566320076099828533,"/* New stuff in 1.5 begins here */
+
+CREATE OR REPLACE FUNCTION pgstathashindex(IN relname regclass,
+	OUT version INTEGER,
+	OUT bucket_pages BIGINT,
+	OUT overflow_pages BIGINT,
+	OUT bitmap_pages BIGINT,
+	OUT unused_pages BIGINT,
+	OUT live_items BIGINT,
+	OUT dead_items BIGINT,
+	OUT free_percent FLOAT8)
+AS '$libdir/pgstattuple', 'pgstathashindex'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.049638,0.049638,0.049638,0.049638,0,0,48,0,0,0,0,0,0,0,0,0,0,0,9,0,1117
+10,16385,-2028750283664882377,"/* New stuff in 1.3 begins here */
+
+CREATE OR REPLACE FUNCTION pgstattuple_approx(IN reloid regclass,
+    OUT table_len BIGINT,               -- physical table length in bytes
+    OUT scanned_percent FLOAT8,         -- what percentage of the table's pages was scanned
+    OUT approx_tuple_count BIGINT,      -- estimated number of live tuples
+    OUT approx_tuple_len BIGINT,        -- estimated total length in bytes of live tuples
+    OUT approx_tuple_percent FLOAT8,    -- live tuples in % (based on estimate)
+    OUT dead_tuple_count BIGINT,        -- exact number of dead tuples
+    OUT dead_tuple_len BIGINT,          -- exact total length in bytes of dead tuples
+    OUT dead_tuple_percent FLOAT8,      -- dead tuples in % (based on estimate)
+    OUT approx_free_space BIGINT,       -- estimated free space in bytes
+    OUT approx_free_percent FLOAT8)     -- free space in % (based on estimate)
+AS '$libdir/pgstattuple', 'pgstattuple_approx_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.051369,0.051369,0.051369,0.051369,0,0,45,0,0,0,0,0,0,0,0,0,0,0,8,0,1131
+16384,16385,7248583042877597542,"prepare payment (INTEGER, INTEGER, INTEGER, INTEGER, NUMERIC, INTEGER, NUMERIC, VARCHAR) AS select payment($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",0,0,0,0,0,0,59764382,206702809.7947418,0.111984,3071.724583,3.45862874972322,10.434839169092186,59764382,4325489992,21309117,27105467,16963894,0,0,0,0,0,0,0,0,297173203,16328271,148513517845
+16384,16385,1971131177986656941,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_10 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5976129,61423969.860348284,0.07522200000000001,1670.066276,10.278220209160803,21.17249482520856,5976129,399246118,2333195,7512469,1256047,0,0,0,0,0,0,0,0,82835568,7427872,62174509884
+10,16385,-9200501687501372896,"/* New stuff in 1.1 begins here */
+
+CREATE OR REPLACE FUNCTION pgstatginindex(IN relname regclass,
+    OUT version INT4,
+    OUT pending_pages INT4,
+    OUT pending_tuples BIGINT)
+AS '$libdir/pgstattuple', 'pgstatginindex_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.180298,0.180298,0.180298,0.180298,0,0,47,1,1,0,0,0,0,0,0,0,0,0,8,1,4862
+10,16385,-583053980741995473,GRANT EXECUTE ON FUNCTION pgstattuple(text) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.47796,0.47796,0.47796,0.47796,0,0,31,1,1,0,0,0,0,0,0,0,0,0,5,1,7744
+10,16385,9123510028664027085,CREATE EXTENSION IF NOT EXISTS pg_prewarm,0,0,0,0,0,0,1,8.008745,8.008745,8.008745,8.008745,0,0,363,4,3,0,0,0,0,0,0,0,0,0,37,3,11758
+10,16385,8862327702913361285,"/* contrib/pgstattuple/pgstattuple--1.4--1.5.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+CREATE OR REPLACE FUNCTION pgstattuple(IN relname text,
+    OUT table_len BIGINT,		-- physical table length in bytes
+    OUT tuple_count BIGINT,		-- number of live tuples
+    OUT tuple_len BIGINT,		-- total tuples length in bytes
+    OUT tuple_percent FLOAT8,		-- live tuples in %
+    OUT dead_tuple_count BIGINT,	-- number of dead tuples
+    OUT dead_tuple_len BIGINT,		-- total dead tuples length in bytes
+    OUT dead_tuple_percent FLOAT8,	-- dead tuples in %
+    OUT free_space BIGINT,		-- free space in bytes
+    OUT free_percent FLOAT8)		-- free space in %
+AS '$libdir/pgstattuple', 'pgstattuple_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.11055,0.11055,0.11055,0.11055,0,0,47,1,1,0,0,0,0,0,0,0,0,0,8,1,8626
+10,16385,8791746904918487037,"COPY (SELECT c.oid, c.relname, st.* FROM pg_class AS c, pgstatindex(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND relkind = 'i' ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,11006.973003,11006.973003,11006.973003,11006.973003,0,10,786,4047523,0,0,0,0,0,0,0,0,0,0,3,0,176
+10,16385,-1712481118449147880,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,9.374846,3.395798,5.979048,4.687423,1.2916249999999998,332,1962,10,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,2700628625683335873,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_07 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5975834,61404815.44129441,0.08103,1343.060916,10.27552228547438,21.16540329347454,5975834,399220275,2334873,7514901,1249329,0,0,0,0,0,0,0,0,82820137,7420369,62124586501
+10,16385,7512874629618090627,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,1.6654170000000001,0.795483,0.8699340000000001,0.8327085000000001,0.03722550000000002,228,36,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7129307750008833110,"UPDATE warehouse
+	   SET w_ytd = w_ytd + p_h_amount
+	 WHERE w_id = p_w_id
+	 RETURNING w_street_1, w_street_2, w_city, w_state, w_zip, w_name",0,0,0,0,0,0,59764382,52039469.268264115,0.012683999999999999,3070.694701,0.8707438699573283,7.9803583614663935,59764382,1343489361,30047,111806,95761,0,0,0,0,0,0,0,0,64220266,57149,4627610660
+16384,16385,7776757726154518965,"INSERT INTO ORDERS (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES (no_d_next_o_id, no_d_id, no_w_id, no_c_id, current_timestamp, no_o_ol_cnt, no_o_all_local)",0,0,0,0,0,0,59754439,11789727.68180542,0.01148,1475.6700190000001,0.19730295989904945,2.3556533305734555,59754439,547692004,2598833,4613200,3653429,0,0,0,0,0,0,0,0,179857345,2021123,26382542726
+10,16385,7692802627618774262,"CREATE FUNCTION pg_relpages(IN relname text)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpages'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.067552,0.067552,0.067552,0.067552,0,0,38,1,1,0,0,0,0,0,0,0,0,0,9,1,4783
+10,16385,-1808560147086452387,COPY (SELECT * FROM pg_stat_all_indexes) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,1.5228380000000001,0.7375520000000001,0.7852859999999999,0.7614190000000001,0.023866999999999944,332,1040,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,13715,5470398651945588767,"copy (select now(), * from pg_stat_activity) to stdout",0,0,0,0,0,0,149,1533.8585499999997,2.027864,76.920035,10.294352684563757,10.65237084484838,66244,37104,1474,0,1131,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7505728545260153106,"INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
+	SELECT no_d_next_o_id,
+		   no_d_id,
+		   no_w_id,
+		   data.line_number,
+		   data.item_id,
+		   data.supply_wid,
+		   data.quantity,
+		   data.amount,
+		   data.stock_dist
+	  FROM UNNEST(order_line_array,
+				   item_id_array,
+				   supply_wid_array,
+				   quantity_array,
+				   amount_array,
+				   stock_dist_array)
+		   AS data( line_number, item_id, supply_wid, quantity, amount, stock_dist)",0,0,0,0,0,0,59754439,79039465.49877545,0.023345,1475.445531,1.3227379726347601,8.447462059221019,597538874,3079877177,1895603,11387371,14931860,0,0,0,0,0,0,0,0,1197393701,1759418,124914711972
+16384,16385,-6556074230083062131,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_01 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5973505,61468504.7084848,0.080544,1369.887045,10.290190551187678,21.15509305643197,5973505,399164094,2331037,7509170,1248064,0,0,0,0,0,0,0,0,82820462,7414884,62082547116
+10,16385,-5728662229740608972,REVOKE EXECUTE ON FUNCTION pg_relpages(regclass) FROM PUBLIC,0,0,0,0,0,0,1,0.019952,0.019952,0.019952,0.019952,0,0,16,0,0,0,0,0,0,0,0,0,0,0,6,0,724
+10,16385,-8773329865684120251,"CREATE OR REPLACE FUNCTION pgstatindex(IN relname regclass,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindexbyid_v1_5'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.111936,0.111936,0.111936,0.111936,0,0,45,0,0,0,0,0,0,0,0,0,0,0,8,0,1084
+10,16385,4746814237094050184,"CREATE FUNCTION pg_relpages(IN relname regclass)
+RETURNS BIGINT
+AS '$libdir/pgstattuple', 'pg_relpagesbyid'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.357591,0.357591,0.357591,0.357591,0,0,41,1,1,0,0,0,0,0,0,0,0,0,9,1,8344
+10,16385,7083010755416704747,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,0.510855,0.186516,0.324339,0.2554275,0.06891150000000001,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-7402257296692186193,"prepare ostat (INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR) AS select * from ostat($1,$2,$3,$4,$5) as (ol_i_id integer,  ol_supply_w_id integer, ol_quantity smallint, ol_amount NUMERIC, ol_delivery_d TIMESTAMPtz,  out_os_c_id INTEGER, out_os_c_last VARCHAR, os_c_first VARCHAR, os_c_middle VARCHAR, os_c_balance NUMERIC, os_o_id INTEGER, os_entdate TIMESTAMPtz, os_o_carrier_id INTEGER)",0,0,0,0,0,0,5971237,17975067.900683884,0.047192,1600.803323,3.0102754087104424,15.072004424651972,21264475,68952991,4934464,2133610,3456780,0,0,0,0,0,0,0,0,2410707,859704,5506949154
+16384,16385,3697730802376077748,"UPDATE customer
+	   SET c_balance = COALESCE(c_balance,$11) + ids_and_sums.sum_amounts
+	  FROM UNNEST(d_id_array, c_id_array, sum_amounts) AS ids_and_sums(d_id, c_id, sum_amounts)
+	 WHERE customer.c_id = ids_and_sums.c_id
+	   AND c_d_id = ids_and_sums.d_id
+	   AND c_w_id = d_w_id",0,0,0,0,0,0,5969233,73334480.38499348,0.00095,434.310323,12.28541093721832,21.565945875256386,58715260,407939219,10192756,15627409,8055044,0,0,0,0,0,0,0,0,89642936,7148275,57821568610
+10,13715,-7743836310767145546,"copy (select now(), * from pg_stat_activity) to stdout",0,0,0,0,0,0,149,588.5014910000001,0.205383,9.071997999999999,3.9496744362416107,1.7991223672915921,66244,745,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,2190393618323980000,"CREATE FUNCTION pgstatindex(IN relname text,
+    OUT version INT,
+    OUT tree_level INT,
+    OUT index_size BIGINT,
+    OUT root_block_no BIGINT,
+    OUT internal_pages BIGINT,
+    OUT leaf_pages BIGINT,
+    OUT empty_pages BIGINT,
+    OUT deleted_pages BIGINT,
+    OUT avg_leaf_density FLOAT8,
+    OUT leaf_fragmentation FLOAT8)
+AS '$libdir/pgstattuple', 'pgstatindex'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.809251,0.809251,0.809251,0.809251,0,0,58,1,2,0,0,0,0,0,0,0,0,0,9,1,8048
+16384,16385,-1526777640298194581,select sum(d_next_o_id) from district,0,0,0,0,0,0,2,13225.68118,279.50969799999996,12946.171482,6612.84059,6333.330892,2,13612,89726,0,57917,0,0,0,0,0,0,0,0,55,0,4790
+10,16385,-3832115078929431881,COPY (SELECT * FROM pg_stat_all_tables) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,19.079242,5.625352,13.45389,9.539621,3.9142689999999996,228,1072,68,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,7241428547202207144,"/* contrib/pg_prewarm/pg_prewarm--1.1--1.2.sql */
+
+-- complain if script is sourced in psql, rather than via ALTER EXTENSION
+
+
+CREATE FUNCTION autoprewarm_start_worker()
+RETURNS VOID STRICT
+AS '$libdir/pg_prewarm', 'autoprewarm_start_worker'
+LANGUAGE C",0,0,0,0,0,0,1,0.275733,0.275733,0.275733,0.275733,0,0,43,1,1,0,0,0,0,0,0,0,0,0,9,1,8230
+16384,16385,-8858851799525971598,"SELECT c_discount, c_last, c_credit, w_tax
+	                                                      FROM customer, warehouse
+	WHERE warehouse.w_id = no_w_id AND customer.c_w_id = no_w_id AND customer.c_d_id = no_d_id AND customer.c_id = no_c_id",0,0,0,0,0,0,59754439,93332404.44913852,0.010863,2055.333934,1.5619325695477602,5.873650366292148,59754439,1295372956,10260650,5086562,7601457,0,0,0,0,0,0,0,0,17439405,1640875,11306767829
+10,16385,5316678639987306032,"/* New stuff in 1.1 begins here */
+
+CREATE FUNCTION pgstatginindex(IN relname regclass,
+    OUT version INT4,
+    OUT pending_pages INT4,
+    OUT pending_tuples BIGINT)
+AS '$libdir/pgstattuple', 'pgstatginindex'
+LANGUAGE C STRICT PARALLEL SAFE",0,0,0,0,0,0,1,0.073382,0.073382,0.073382,0.073382,0,0,53,0,0,0,0,0,0,0,0,0,0,0,9,0,1011
+16384,16385,-8330792180803161351,"SELECT ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d, out_os_c_id, out_os_c_last, os_c_first, os_c_middle, os_c_balance, os_o_id, os_entdate, os_o_carrier_id
+FROM order_line
+WHERE ol_o_id = os_o_id AND ol_d_id = os_d_id AND ol_w_id = os_w_id",0,0,0,0,0,0,5971237,6819046.855174836,0.000403,1475.900809,1.1419822819247423,5.504538029502016,0,17270087,3507040,1519538,2425999,0,0,0,0,0,0,0,0,1178125,633126,3853928204
+10,16385,-5642866422942357720,GRANT EXECUTE ON FUNCTION pg_relpages(regclass) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.019217,0.019217,0.019217,0.019217,0,0,16,0,0,0,0,0,0,0,0,0,0,0,2,0,218
+16384,16385,8676757570164424617,"SELECT o_id, o_carrier_id, o_entry_d
+                                          FROM
+(SELECT o_id, o_carrier_id, o_entry_d
+FROM orders where o_d_id = os_d_id AND o_w_id = os_w_id and o_c_id=os_c_id
+ORDER BY o_id DESC) AS SUBQUERY
+LIMIT $4",0,0,0,0,0,0,5971237,6605995.204707086,0.000898,1402.6596570000002,1.1063026312149218,12.14151961745679,2125041,10723107,1018252,406943,726797,0,0,0,0,0,0,0,0,561982,161658,1205273434
+16384,16385,4984645969377731317,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_08 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5974986,61492374.48239445,0.07753399999999999,1352.452685,10.291634906325372,21.18278537245937,5974986,399222196,2334080,7508417,1259255,0,0,0,0,0,0,0,0,82822112,7423562,62138709112
+16384,16385,-468330028793009081,"SELECT c_first, c_middle, c_id,
+				c_street_1, c_street_2, c_city, c_state, c_zip,
+				c_phone, c_credit, c_credit_lim,
+				c_discount, c_balance, c_since
+		  FROM customer
+		 WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_last = p_c_last
+		ORDER BY c_first",0,0,0,0,0,0,35853754,1801.228277035624,2.3e-05,1.396916,5.023820593513603e-05,0.00036045043220055736,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,4504497728519731637,"SELECT c_first, c_middle, c_last,
+		c_street_1, c_street_2, c_city, c_state, c_zip,
+		c_phone, c_credit, c_credit_lim,
+		c_discount, c_balance, c_since
+		                                                                                                                                                                                    FROM customer
+		WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id",0,0,0,0,0,0,23910628,32372256.55877589,0.005465,1343.574138,1.3538856678612077,4.541732024252299,23910628,115109008,7401949,2956242,5215589,0,0,0,0,0,0,0,0,7204610,1502696,10846419092
+16384,16385,5004483113557288033,"INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id,h_w_id, h_date, h_amount, h_data)
+	VALUES (p_c_d_id, p_c_w_id, p_c_id, p_d_id,	p_w_id, tstamp, p_h_amount, p_w_name || $40 || p_d_name)",0,0,0,0,0,0,59764382,4222437.211192712,0.003224,1473.883726,0.07065139920953625,1.772628804267968,59764382,71777074,502,572629,937646,0,0,0,0,0,0,0,0,59764382,2146,6099985549
+10,16385,3054876908056495962,GRANT EXECUTE ON FUNCTION pgstatginindex(regclass) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.051225,0.051225,0.051225,0.051225,0,0,14,0,0,0,0,0,0,0,0,0,0,0,2,0,218
+10,16385,6283795005650789759,"COPY (SELECT c.oid, c.relname, st.* FROM pg_class AS c, pgstatindex(c.oid::regclass) AS st WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1) AND relkind = $2 ORDER BY relname) TO stdout WITH CSV HEADER",0,0,0,0,0,0,1,11004.240428,11004.240428,11004.240428,11004.240428,0,10,497,4047523,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-8523811733626467755,REVOKE EXECUTE ON FUNCTION pgstathashindex(regclass) FROM PUBLIC,0,0,0,0,0,0,1,0.014461,0.014461,0.014461,0.014461,0,0,7,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+16384,16385,-3485163798271325808,select sum(xact_commit + xact_rollback) from pg_stat_database,0,0,0,0,0,0,2,20.700966,10.350069999999999,10.350896,10.350483,0.00041300000000132897,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-8345514951133738213,"UPDATE customer
+		   SET c_balance = p_c_balance - p_h_amount
+		 WHERE c_w_id = p_c_w_id AND c_d_id = p_c_d_id AND c_id = p_c_id
+		RETURNING c_balance, $16",0,0,0,0,0,0,47805161,57046649.12217667,0.009112,1342.848929,1.1933156991601863,4.5542487833396335,47805161,363338195,13241587,19402347,9993679,0,0,0,0,0,0,0,0,77728709,12157232,98713451507
+16384,16385,1876936318153930903,"WITH order_line_update AS (
+        UPDATE order_line
+           SET ol_delivery_d = current_timestamp
+		  FROM UNNEST(o_id_array, d_id_array) AS ids(o_id, d_id)
+		 WHERE ol_o_id = ids.o_id
+           AND ol_d_id = ids.d_id
+           AND ol_w_id = d_w_id
+		RETURNING ol_d_id, ol_o_id, ol_amount
+		)
+	SELECT array_agg(ol_d_id), array_agg(c_id), array_agg(sum_amount)
+	  FROM ( SELECT ol_d_id,
+			       ( SELECT DISTINCT o_c_id FROM orders WHERE o_id = ol_o_id AND o_d_id = ol_d_id AND o_w_id = d_w_id) AS c_id,
+			        sum(ol_amount) AS sum_amount
+			   FROM order_line_update
+			  GROUP BY ol_d_id, ol_o_id ) AS inner_sum",0,0,0,0,0,0,5969233,178118418.01939797,0.002961,4500.679282,29.83941454780043,43.42894487050739,5969233,2730820749,17204311,22067844,19107858,0,0,0,0,0,0,0,0,1135362090,10981576,180912857242
+10,16385,435174621275570554,COPY (SELECT * FROM pg_stat_database) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,38.574914,18.741364,19.83355,19.287457,0.546092999999999,10,331,69,0,0,0,0,0,0,0,0,0,0,0,0,0
+16384,16385,-1880495502120823889,"prepare delivery (INTEGER, INTEGER) AS select delivery($1,$2)",0,0,0,0,0,0,5969233,383797410.60314703,0.399241,6995.411653,64.29593393374157,124.75004822481974,5969233,5673300316,28983182,40038142,28591855,0,0,0,0,0,0,0,0,1419461621,19449441,261504373234
+16384,16385,-7405356362673021670,"SELECT COUNT(DISTINCT (s_i_id))                     FROM order_line, stock, district
+	 WHERE ol_w_id = st_w_id
+	   AND ol_d_id = st_d_id
+	   AND d_w_id=st_w_id
+	   AND d_id=st_d_id
+	   AND (ol_o_id < d_next_o_id)
+	   AND ol_o_id >= (d_next_o_id - $4)
+	   AND s_w_id = st_w_id
+	   AND s_i_id = ol_i_id
+	   AND s_quantity < threshold",0,0,0,0,0,0,5971889,1007945542.9883882,0.443555,286516.77662200003,168.78169419897947,2633.4026550869526,5971889,81931761742,21831367,13617678,14057433,0,0,0,0,0,0,0,0,196385864,11631442,96632921626
+10,16385,-5109480985238204195,COPY (SELECT * FROM pg_stat_bgwriter) TO stdout WITH CSV HEADER,0,0,0,0,0,0,2,3.254747,1.084563,2.170184,1.6273735,0.5428104999999999,2,126,4,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,8476351455718547263,REVOKE EXECUTE ON FUNCTION pgstattuple(text) FROM PUBLIC,0,0,0,0,0,0,1,0.858277,0.858277,0.858277,0.858277,0,0,42,8,4,0,0,0,0,0,0,0,0,0,6,3,14982
+10,16385,8073967179673371483,REVOKE EXECUTE ON FUNCTION pg_relpages(text) FROM PUBLIC,0,0,0,0,0,0,1,0.057289,0.057289,0.057289,0.057289,0,0,9,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+10,16385,-1955220476226137549,"WITH
+settings (block_size, shared_buffers, effective_cache_size) AS (
+    VALUES (pg_size_bytes(current_setting($1)),
+            pg_size_bytes(current_setting($2)),
+            pg_size_bytes(current_setting($3)))
+),
+rels (oid, size) AS (
+    SELECT oid, sum(relpages) OVER (ORDER BY relpages)
+    FROM pg_class
+    WHERE relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $4)
+      AND relkind IN ($5, $6)
+)
+SELECT pg_prewarm(r.oid, CASE WHEN r.size * s.block_size <= s.shared_buffers THEN $7 ELSE $8 END)
+FROM rels AS r,
+     settings AS s
+WHERE r.size * s.block_size <= GREATEST(s.shared_buffers, s.effective_cache_size)",0,0,0,0,0,0,1,431133.983731,431133.983731,431133.983731,431133.983731,0,19,1129157,8497756,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-7053481684217008096,REVOKE EXECUTE ON FUNCTION pgstatindex(regclass) FROM PUBLIC,0,0,0,0,0,0,1,0.017166,0.017166,0.017166,0.017166,0,0,12,0,0,0,0,0,0,0,0,0,0,0,3,0,282
+16384,16385,-1825438725100700971,"WITH stock_update AS (
+	        UPDATE stock
+    	       SET s_quantity = ( CASE WHEN s_quantity < (item_stock.quantity + $23) THEN s_quantity + $24 ELSE s_quantity END) - item_stock.quantity
+			  FROM UNNEST(item_id_array, supply_wid_array, quantity_array, price_array)
+				   AS item_stock (item_id, supply_wid, quantity, price)
+			 WHERE stock.s_i_id = item_stock.item_id
+			   AND stock.s_w_id = item_stock.supply_wid
+			   AND stock.s_w_id = ANY(supply_wid_array)
+			RETURNING stock.s_dist_04 as s_dist, stock.s_quantity, ( item_stock.quantity + item_stock.price * ( $25 + no_w_tax + no_d_tax ) * ( $26 - no_c_discount ) ) amount
+    	)
+		SELECT array_agg ( s_dist ), array_agg ( s_quantity ), array_agg ( amount )
+		FROM stock_update",0,0,0,0,0,0,5979273,61449054.796801634,0.07872799999999999,1478.686272,10.277011067532555,21.122071445633352,5979273,399542494,2336239,7516206,1257285,0,0,0,0,0,0,0,0,82904554,7423541,62157017810
+10,16385,7197326979178551549,GRANT EXECUTE ON FUNCTION pgstatindex(regclass) TO pg_stat_scan_tables,0,0,0,0,0,0,1,0.041847,0.041847,0.041847,0.041847,0,0,28,1,1,0,0,0,0,0,0,0,0,0,5,1,3432
+10,16385,7104491036261723972,COPY (SELECT * FROM pg_settings) TO stdout WITH CSV HEADER,0,0,0,0,0,0,1,2.697627,2.697627,2.697627,2.697627,0,339,36,3,0,0,0,0,0,0,0,0,0,0,0,0,0
+10,16385,-3400905425668852440,"/* contrib/pg_prewarm/pg_prewarm--1.1.sql */
+
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+
+
+-- Register the function.
+CREATE FUNCTION pg_prewarm(regclass,
+						   mode text default 'buffer',
+						   fork text default 'main',
+						   first_block int8 default null,
+						   last_block int8 default null)
+RETURNS int8
+AS '$libdir/pg_prewarm', 'pg_prewarm'
+LANGUAGE C PARALLEL SAFE",0,0,0,0,0,0,1,3.332969,3.332969,3.332969,3.332969,0,0,93,1,0,0,0,0,0,0,0,0,0,0,10,0,1631
